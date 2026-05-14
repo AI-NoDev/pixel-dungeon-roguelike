@@ -57,27 +57,37 @@ class _LoadingScreenState extends State<LoadingScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo / icon
+                // Logo
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4FC3F7).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF4FC3F7), width: 2),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF66BB6A).withValues(alpha: 0.4),
+                        blurRadius: 30,
+                        spreadRadius: 4,
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.castle,
-                    color: Color(0xFF4FC3F7),
-                    size: 48,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.none,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 // Title
-                const Text(
-                  'PIXEL DUNGEON',
-                  style: TextStyle(
+                Text(
+                  t.t('app_title'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -86,7 +96,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'SURVIVORS',
+                  t.t('app_subtitle'),
                   style: TextStyle(
                     color: Colors.amber.shade400,
                     fontSize: 12,
@@ -113,7 +123,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF4FC3F7), Colors.amber],
+                              colors: [Color(0xFF66BB6A), Color(0xFFFFD54F)],
                             ),
                             borderRadius: BorderRadius.circular(2),
                           ),

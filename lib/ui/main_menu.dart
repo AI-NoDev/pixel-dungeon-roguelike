@@ -62,23 +62,35 @@ class _MainMenuState extends State<MainMenu> {
     final t = AppLocalizations.of(context);
     return Column(
       children: [
+        // Logo image
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.none,
+          ),
+        ),
+        const SizedBox(height: 12),
         Text(
           t.t('app_title'),
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 28,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: 4,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           t.t('app_subtitle'),
           style: TextStyle(
             color: Colors.amber.shade400,
-            fontSize: 16,
+            fontSize: 12,
             fontWeight: FontWeight.w300,
-            letterSpacing: 8,
+            letterSpacing: 6,
           ),
         ),
       ],

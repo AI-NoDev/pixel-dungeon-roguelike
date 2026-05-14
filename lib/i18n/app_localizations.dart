@@ -22,8 +22,8 @@ class AppLocalizations {
       'loading_assets': 'Loading game assets',
 
       // Main menu
-      'app_title': 'PIXEL DUNGEON',
-      'app_subtitle': 'SURVIVORS',
+      'app_title': 'POP! SLIME',
+      'app_subtitle': 'PIXEL ROGUELIKE',
       'select_hero': 'SELECT HERO',
       'start_dungeon': 'START DUNGEON',
       'locked': 'LOCKED',
@@ -146,8 +146,8 @@ class AppLocalizations {
       'loading_assets': '正在加载游戏资源',
 
       // Main menu
-      'app_title': '像素地牢',
-      'app_subtitle': '幸存者',
+      'app_title': '啵噗史莱姆',
+      'app_subtitle': '像素 ROGUELIKE',
       'select_hero': '选择英雄',
       'start_dungeon': '进入地牢',
       'locked': '已锁定',
