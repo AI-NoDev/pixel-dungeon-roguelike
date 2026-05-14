@@ -11,6 +11,8 @@ import '../components/decal.dart';
 import '../components/fog_of_war.dart';
 import '../components/talent_pickup.dart';
 import '../components/floating_text.dart';
+import '../components/pickup_base.dart';
+import '../components/weapon_pickup_drop.dart';
 import '../systems/input_system.dart';
 import '../systems/combat_system.dart';
 import '../systems/skill_system.dart';
@@ -78,7 +80,7 @@ class PixelDungeonGame extends FlameGame
 
     // Spawn player at start room center
     final startRoom = dungeonMap.getRoom(dungeonMap.startRoomId);
-    player = Player(position: startRoom.center);
+    player = Player(position: startRoom.center, heroType: selectedHero.type);
     _applyHeroStats();
     world.add(player);
 
@@ -169,6 +171,14 @@ class PixelDungeonGame extends FlameGame
         choices: talents,
       ));
     }
+    // Elite rooms also drop a bonus weapon on the floor.
+    if (room.type == RoomType.elite) {
+      final w = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
+      world.add(WeaponPickupDrop(
+        position: room.center + Vector2(40, 0),
+        weapon: w,
+      ));
+    }
 
     // Boss room → next floor
     if (room.type == RoomType.boss) {
@@ -187,9 +197,19 @@ class PixelDungeonGame extends FlameGame
   }
 
   void _spawnTreasure(RoomNode room) {
-    pendingWeapon = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
-    onShowWeaponPickup?.call();
-    pauseEngine();
+    // Treasure rooms now drop the weapon directly on the floor for the
+    // player to pick up by interaction (no popup).
+    final w = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
+    world.add(WeaponPickupDrop(
+      position: room.center,
+      weapon: w,
+    ));
+    // Mark treasure rooms as cleared on entry so progression continues.
+    if (!room.cleared) {
+      room.cleared = true;
+      gameState.roomsCleared++;
+      onStateChanged?.call();
+    }
   }
 
   // ---- Talent picker callbacks ----
@@ -232,6 +252,7 @@ class PixelDungeonGame extends FlameGame
     world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
     world.children.whereType<Decal>().forEach((d) => d.removeFromParent());
     world.children.whereType<TalentPickup>().forEach((t) => t.removeFromParent());
+    world.children.whereType<WeaponPickupDrop>().forEach((w) => w.removeFromParent());
     currentBoss?.removeFromParent();
     currentBoss = null;
     dungeonWorld.removeFromParent();
@@ -276,5 +297,28 @@ class PixelDungeonGame extends FlameGame
       case DungeonThemeType.inferno: return 'theme_inferno';
       case DungeonThemeType.void_: return 'theme_void';
     }
+  }
+
+  /// Returns the nearest pickup within [maxRange] world units, or null.
+  /// Used by the on-screen interaction button.
+  InteractablePickup? nearestPickup({double maxRange = 60}) {
+    InteractablePickup? best;
+    double bestDist = maxRange;
+    for (final c in world.children) {
+      if (c is InteractablePickup && !(c as InteractablePickup).isConsumed) {
+        final pickup = c as InteractablePickup;
+        final d = pickup.position.distanceTo(player.position);
+        if (d < bestDist) {
+          bestDist = d;
+          best = pickup;
+        }
+      }
+    }
+    return best;
+  }
+
+  /// Triggered by the on-screen interaction button.
+  void triggerInteract() {
+    nearestPickup()?.interact();
   }
 }

@@ -15,7 +15,10 @@ class InputSystem {
   /// True ONLY when player has dragged the joystick out of deadzone.
   bool isManualAim = false;
 
-  static const double _deadzone = 0.3;
+  /// Deadzone — joystick must be pushed past this fraction of its radius
+  /// before manual aim kicks in. Bumped up so a tiny finger drift while
+  /// holding the stick doesn't switch you out of auto-aim.
+  static const double _deadzone = 0.55;
 
   void updateMove(Vector2 direction) {
     moveDirection = direction;

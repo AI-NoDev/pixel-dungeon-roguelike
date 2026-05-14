@@ -78,6 +78,7 @@ flutter:
     - assets/images/slimes/
     - assets/images/weapons/
     - assets/images/bullets/
+    - assets/images/heroes/
     - assets/audio/
     - assets/tiles/
 

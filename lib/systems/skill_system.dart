@@ -123,13 +123,13 @@ class SkillSystem {
   void _rogueShadowStep() {
     // Speed boost
     game.player.speedMultiplier *= 1.5;
-    // Visual: make player semi-transparent (simulated via color)
-    game.player.body.paint.color = const Color(0x664FC3F7);
+    // Visual: dim the player's sprite while invisible.
+    game.player.setOpacity(0.4);
 
     Future.delayed(const Duration(seconds: 3), () {
       if (!game.player.isDead) {
         game.player.speedMultiplier /= 1.5;
-        game.player.body.paint.color = const Color(0xFF4FC3F7);
+        game.player.setOpacity(1.0);
       }
     });
 

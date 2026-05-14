@@ -1,10 +1,12 @@
 import 'dart:math';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../data/weapons.dart';
 import '../data/talents.dart';
+import '../data/heroes.dart';
 import '../systems/preferences.dart';
 import 'bullet.dart';
 import 'enemy_spawner.dart';
@@ -13,12 +15,14 @@ import 'aura_effect.dart';
 import 'decal.dart';
 
 class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, CollisionCallbacks {
-  Player({required Vector2 position})
+  Player({required Vector2 position, this.heroType = HeroType.knight})
       : super(
           position: position,
           size: Vector2(32, 32),
           anchor: Anchor.center,
         );
+
+  final HeroType heroType;
 
   // Base stats
   double maxHp = 100;
@@ -37,16 +41,31 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   int extraBullets = 0;
   double spreadReduction = 0;
 
-  // Current weapon
-  WeaponData? currentWeapon;
+  // Weapon slots:
+  //   - primary = the starter pistol that you always have. Cannot be dropped.
+  //     Has infinite ammo so you can never run out.
+  //   - secondary = picked-up weapon (only one slot). Has limited ammo and
+  //     auto-falls back to primary when empty.
+  WeaponData primaryWeapon = WeaponPool.starterPistol;
+  WeaponData? secondaryWeapon;
+  int secondaryAmmo = 0;
 
-  // Computed stats
+  /// The weapon currently being fired (secondary if held + has ammo, else primary).
+  WeaponData get activeWeapon {
+    if (secondaryWeapon != null && secondaryAmmo > 0) return secondaryWeapon!;
+    return primaryWeapon;
+  }
+
+  /// Backwards compat — many systems used `currentWeapon`.
+  WeaponData get currentWeapon => activeWeapon;
+
+  // Computed stats based on active weapon
   double get speed => baseSpeed * speedMultiplier;
-  double get attackDamage => (currentWeapon?.damage ?? baseDamage) * damageMultiplier;
-  double get attackInterval => 1.0 / ((currentWeapon?.fireRate ?? baseFireRate) * fireRateMultiplier);
-  double get bulletSpeed => (currentWeapon?.bulletSpeed ?? baseBulletSpeed) * bulletSpeedMultiplier;
-  int get bulletsPerShot => (currentWeapon?.bulletsPerShot ?? 1) + extraBullets;
-  double get spread => (currentWeapon?.spread ?? 0) * (1.0 - spreadReduction);
+  double get attackDamage => activeWeapon.damage * damageMultiplier;
+  double get attackInterval => 1.0 / (activeWeapon.fireRate * fireRateMultiplier);
+  double get bulletSpeed => activeWeapon.bulletSpeed * bulletSpeedMultiplier;
+  int get bulletsPerShot => activeWeapon.bulletsPerShot + extraBullets;
+  double get spread => activeWeapon.spread * (1.0 - spreadReduction);
 
   // State
   Vector2 moveDirection = Vector2.zero();
@@ -59,29 +78,88 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   // Talents collected
   List<TalentData> talents = [];
 
-  // Visual
-  late RectangleComponent body;
-  late RectangleComponent weapon;
+  // Visual: sprite-based hero
+  SpriteAnimationComponent? _animComp;
+  SpriteAnimation? _idleAnim;
+  SpriteAnimation? _walkAnim;
+  SpriteAnimation? _hurtAnim;
+  bool _isMoving = false;
+
+  // Weapon visual: actual sprite (fallback to coloured rect on missing asset).
+  SpriteComponent? _weaponSprite;
+  RectangleComponent? _weaponFallback;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    body = RectangleComponent(
-      size: Vector2(28, 28),
-      position: Vector2(2, 2),
-      paint: Paint()..color = const Color(0xFF4FC3F7),
-    );
-    add(body);
+    // Load animated hero sprite
+    final heroId = _heroSpriteId();
+    try {
+      _idleAnim = await _loadAnim('hero_${heroId}_idle.png', 4, 0.18);
+      _walkAnim = await _loadAnim('hero_${heroId}_walk.png', 4, 0.10);
+      _hurtAnim = await _loadAnim('hero_${heroId}_hurt.png', 2, 0.10);
+      _animComp = SpriteAnimationComponent(
+        animation: _idleAnim,
+        size: Vector2(32, 32),
+        anchor: Anchor.topLeft,
+      );
+      add(_animComp!);
+    } catch (_) {
+      // Fallback rectangle if sprites missing
+      add(RectangleComponent(
+        size: Vector2(28, 28),
+        position: Vector2(2, 2),
+        paint: Paint()..color = const Color(0xFF4FC3F7),
+      ));
+    }
 
-    weapon = RectangleComponent(
-      size: Vector2(16, 4),
-      position: Vector2(24, 14),
-      paint: Paint()..color = const Color(0xFFFFD54F),
-    );
-    add(weapon);
+    await _refreshWeaponSprite();
 
-    add(RectangleHitbox(size: Vector2(28, 28), position: Vector2(2, 2)));
+    add(RectangleHitbox(size: Vector2(20, 22), position: Vector2(6, 5)));
+  }
+
+  String _heroSpriteId() {
+    switch (heroType) {
+      case HeroType.knight: return 'knight';
+      case HeroType.ranger: return 'ranger';
+      case HeroType.mage:   return 'mage';
+      case HeroType.rogue:  return 'rogue';
+    }
+  }
+
+  Future<SpriteAnimation> _loadAnim(String filename, int frames, double step) async {
+    final image = await game.images.load('heroes/$filename');
+    final src = image.width ~/ frames;
+    final sheet = SpriteSheet(image: image, srcSize: Vector2.all(src.toDouble()));
+    return sheet.createAnimation(row: 0, stepTime: step, to: frames);
+  }
+
+  /// Build (or rebuild) the weapon sprite for the active weapon.
+  Future<void> _refreshWeaponSprite() async {
+    _weaponSprite?.removeFromParent();
+    _weaponFallback?.removeFromParent();
+    _weaponSprite = null;
+    _weaponFallback = null;
+
+    final w = activeWeapon;
+    try {
+      final image = await game.images.load('weapons/weapon_${w.spriteId}.png');
+      _weaponSprite = SpriteComponent(
+        sprite: Sprite(image),
+        size: Vector2.all(20),
+        anchor: Anchor.center,
+        position: Vector2(16 + 12, 16),
+      );
+      add(_weaponSprite!);
+    } catch (_) {
+      _weaponFallback = RectangleComponent(
+        size: Vector2(16, 4),
+        position: Vector2(24, 14),
+        paint: Paint()..color = w.color,
+      );
+      add(_weaponFallback!);
+    }
   }
 
   @override
@@ -109,8 +187,15 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       }
     }
 
-    // Auto-aim while finger is on aim joystick but not dragged out
-    // (deadzone center = auto-aim, drag = manual aim)
+    // Walk vs idle animation
+    final movingNow = moveDirection.length > 0;
+    if (movingNow != _isMoving && _animComp != null) {
+      _isMoving = movingNow;
+      _animComp!.animation = _isMoving ? _walkAnim : _idleAnim;
+    }
+
+    // Auto-aim while finger is on aim joystick but not dragged out.
+    // Range is large + always-on so a tiny finger jiggle never disables it.
     if (isShooting && !isManualAim) {
       final autoTarget = _findNearestEnemy(GamePreferences.autoAimRange);
       if (autoTarget != null) {
@@ -125,11 +210,22 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       _shootTimer = 0;
     }
 
-    // Update weapon visual
-    if (aimDirection.length > 0) {
-      final angle = atan2(aimDirection.y, aimDirection.x);
-      weapon.angle = angle;
-      weapon.position = Vector2(
+    // Update weapon visual (rotation + offset around player)
+    _updateWeaponVisual();
+  }
+
+  void _updateWeaponVisual() {
+    if (aimDirection.length == 0) return;
+    final angle = atan2(aimDirection.y, aimDirection.x);
+    if (_weaponSprite != null) {
+      _weaponSprite!.angle = angle;
+      _weaponSprite!.position = Vector2(
+        16 + cos(angle) * 14,
+        16 + sin(angle) * 14,
+      );
+    } else if (_weaponFallback != null) {
+      _weaponFallback!.angle = angle;
+      _weaponFallback!.position = Vector2(
         16 + cos(angle) * 12,
         16 + sin(angle) * 12 - 2,
       );
@@ -154,19 +250,21 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   void _shoot() {
     if (aimDirection.length == 0) return;
 
+    final w = activeWeapon;
     final baseAngle = atan2(aimDirection.y, aimDirection.x);
 
     // Roll critical hit per shot (10% base chance, can be modified by talents later)
     final isCritical = Random().nextDouble() < critChance;
     final critMultiplier = isCritical ? 2.0 : 1.0;
 
-    for (int i = 0; i < bulletsPerShot; i++) {
+    final shotsThis = bulletsPerShot;
+    for (int i = 0; i < shotsThis; i++) {
       double angle = baseAngle;
 
-      if (bulletsPerShot > 1) {
+      if (shotsThis > 1) {
         // Spread bullets evenly
         final totalSpread = spread > 0 ? spread : 0.3;
-        angle = baseAngle - totalSpread / 2 + (totalSpread / (bulletsPerShot - 1)) * i;
+        angle = baseAngle - totalSpread / 2 + (totalSpread / (shotsThis - 1)) * i;
       }
 
       final bulletDir = Vector2(cos(angle), sin(angle));
@@ -178,19 +276,41 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
         speed: bulletSpeed,
         damage: attackDamage * critMultiplier,
         isPlayerBullet: true,
-        color: currentWeapon?.color ?? const Color(0xFFFFD54F),
-        element: currentWeapon?.element ?? ElementType.none,
+        color: w.color,
+        element: w.element,
         isCritical: isCritical,
       );
 
       game.world.add(bullet);
     }
+
+    // Consume ammo if firing the secondary
+    if (secondaryWeapon != null && secondaryWeapon == w && secondaryAmmo > 0) {
+      secondaryAmmo--;
+      if (secondaryAmmo <= 0) {
+        // Out of ammo — auto-fall back to primary, drop secondary slot.
+        secondaryWeapon = null;
+        secondaryAmmo = 0;
+        _refreshWeaponSprite();
+        game.world.add(FloatingText.buff(
+          position + Vector2(0, -20),
+          'OUT OF AMMO',
+        ));
+        game.onStateChanged?.call();
+      } else {
+        // Notify HUD on every shot so ammo counter updates.
+        game.onStateChanged?.call();
+      }
+    }
   }
 
+  /// Equip a weapon picked up from the floor. The starter pistol is never
+  /// replaced — new weapons go into the secondary slot.
   void equipWeapon(WeaponData weaponData) {
-    currentWeapon = weaponData;
-    // Update weapon visual color
-    weapon.paint.color = weaponData.color;
+    secondaryWeapon = weaponData;
+    secondaryAmmo = weaponData.maxAmmo;
+    _refreshWeaponSprite();
+    game.onStateChanged?.call();
   }
 
   void applyTalent(TalentData talent) {
@@ -253,10 +373,15 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       size_: 14,
     ));
 
-    body.paint.color = const Color(0xFFFF5252);
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (!isDead) body.paint.color = const Color(0xFF4FC3F7);
-    });
+    // Hurt animation flash
+    if (_animComp != null && _hurtAnim != null) {
+      _animComp!.animation = _hurtAnim;
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!isDead && _animComp != null) {
+          _animComp!.animation = _isMoving ? _walkAnim : _idleAnim;
+        }
+      });
+    }
 
     if (hp <= 0) {
       hp = 0;
@@ -304,8 +429,6 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     maxHp = 100;
     isDead = false;
     position = Vector2(400, 300);
-    body.paint.color = const Color(0xFF4FC3F7);
-    weapon.paint.color = const Color(0xFFFFD54F);
 
     // Reset all talent modifiers
     damageMultiplier = 1.0;
@@ -315,7 +438,23 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     extraBullets = 0;
     spreadReduction = 0;
     talents.clear();
-    currentWeapon = null;
+
+    // Restore default starter weapon, drop any pickup
+    primaryWeapon = WeaponPool.starterPistol;
+    secondaryWeapon = null;
+    secondaryAmmo = 0;
+    _refreshWeaponSprite();
+  }
+
+  /// Set opacity of player sprite (used by Rogue's Shadow Step).
+  void setOpacity(double value) {
+    final clamped = value.clamp(0.0, 1.0);
+    if (_animComp != null) {
+      _animComp!.opacity = clamped;
+    }
+    if (_weaponSprite != null) {
+      _weaponSprite!.opacity = clamped;
+    }
   }
 
   @override

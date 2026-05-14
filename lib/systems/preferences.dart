@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Global game preferences that persist between runs.
 class GamePreferences {
   static bool autoAim = true;
-  static double autoAimRange = 400.0;
+  static double autoAimRange = 600.0;
   static bool screenShake = true;
 
   static const _kAutoAim = 'pref_auto_aim';
@@ -14,7 +14,7 @@ class GamePreferences {
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     autoAim = prefs.getBool(_kAutoAim) ?? true;
-    autoAimRange = prefs.getDouble(_kAutoAimRange) ?? 400.0;
+    autoAimRange = prefs.getDouble(_kAutoAimRange) ?? 600.0;
     screenShake = prefs.getBool(_kScreenShake) ?? true;
   }
 

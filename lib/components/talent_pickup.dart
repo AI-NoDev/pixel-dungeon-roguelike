@@ -1,15 +1,15 @@
 import 'dart:math';
-import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../data/talents.dart';
 import '../game/pixel_dungeon_game.dart';
-import 'player.dart';
+import 'pickup_base.dart';
 
 /// A talent scroll that drops on the ground. Walking near it shows a prompt;
-/// closer interaction picks it up and triggers the talent picker UI.
+/// pressing the interaction button picks it up and shows the talent picker.
 class TalentPickup extends PositionComponent
-    with HasGameReference<PixelDungeonGame>, CollisionCallbacks {
+    with HasGameReference<PixelDungeonGame>
+    implements InteractablePickup {
   TalentPickup({required Vector2 position, required this.choices})
       : super(
           position: position,
@@ -42,8 +42,6 @@ class TalentPickup extends PositionComponent
       position: Vector2.all(6),
       paint: Paint()..color = const Color(0xFFFFFFFF),
     ));
-
-    add(CircleHitbox(radius: 14));
   }
 
   @override
@@ -54,15 +52,18 @@ class TalentPickup extends PositionComponent
   }
 
   @override
-  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
-    super.onCollisionStart(intersectionPoints, other);
-    if (other is Player && !_consumed) {
-      _consumed = true;
-      // Trigger talent picker
-      game.pendingTalentChoices = choices;
-      game.onShowTalentPicker?.call();
-      game.pauseEngine();
-      removeFromParent();
-    }
+  String get pickupLabel => 'Pick up Talent';
+
+  @override
+  bool get isConsumed => _consumed;
+
+  @override
+  void interact() {
+    if (_consumed) return;
+    _consumed = true;
+    game.pendingTalentChoices = choices;
+    game.onShowTalentPicker?.call();
+    game.pauseEngine();
+    removeFromParent();
   }
 }

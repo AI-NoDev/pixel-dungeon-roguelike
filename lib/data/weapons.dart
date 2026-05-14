@@ -32,6 +32,7 @@ class WeaponData {
   final double range;
   final Color color;
   final String spriteId;  // matches assets/images/weapons/weapon_<id>.png
+  final int maxAmmo;     // -1 means infinite (only for starter weapon)
 
   const WeaponData({
     required this.name,
@@ -46,6 +47,7 @@ class WeaponData {
     this.range = 3.0,
     required this.color,
     required this.spriteId,
+    this.maxAmmo = 60,
   });
 
   double get attackInterval => 1.0 / fireRate;
@@ -84,6 +86,20 @@ class WeaponData {
 /// Weapon pool for random drops
 class WeaponPool {
   static final Random _random = Random();
+
+  /// Starter pistol — given to every player at the start of a run.
+  /// Cannot be dropped; has infinite ammo (maxAmmo = -1).
+  static const starterPistol = WeaponData(
+    name: 'Starter Pistol',
+    type: WeaponType.pistol,
+    rarity: WeaponRarity.common,
+    damage: 10,
+    fireRate: 2.5,
+    bulletSpeed: 320,
+    color: Color(0xFFFFD54F),
+    spriteId: 'iron_pistol',
+    maxAmmo: -1,
+  );
 
   static final List<WeaponData> _weapons = [
     // === PISTOLS ===
@@ -233,6 +249,7 @@ class WeaponPool {
       bulletSpeed: 500,
       color: Color(0xFF4E342E),
       spriteId: 'long_bow',
+      maxAmmo: 20,
     ),
     const WeaponData(
       name: 'Ice Piercer',
@@ -244,6 +261,7 @@ class WeaponPool {
       bulletSpeed: 550,
       color: Color(0xFF00BCD4),
       spriteId: 'ice_piercer',
+      maxAmmo: 15,
     ),
 
     // === MAGIC ===
@@ -316,6 +334,7 @@ class WeaponPool {
       bulletSpeed: 250,
       color: Color(0xFFBF360C),
       spriteId: 'rocket_launcher',
+      maxAmmo: 12,
     ),
     const WeaponData(
       name: 'Cluster Bomb',
@@ -329,6 +348,7 @@ class WeaponPool {
       spread: 0.4,
       color: Color(0xFFFF6F00),
       spriteId: 'cluster_bomb',
+      maxAmmo: 8,
     ),
 
     // === KNIFE / THROWING ===

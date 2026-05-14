@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../components/pickup_base.dart';
 import '../i18n/app_localizations.dart';
 import 'joystick_widget.dart';
 import 'hud_widget.dart';
@@ -123,6 +124,13 @@ class _GameOverlayState extends State<GameOverlay> {
               game: widget.game,
               skillSystem: widget.game.skillSystem,
             ),
+          ),
+
+          // Interaction button — only visible when standing near a pickup.
+          Positioned(
+            bottom: 200,
+            right: 30,
+            child: InteractButton(game: widget.game),
           ),
 
           // Talent picker overlay
@@ -299,6 +307,71 @@ class _GameOverlayState extends State<GameOverlay> {
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         ],
       ),
+    );
+  }
+}
+
+
+/// Floating "E" / interact button shown when the player is near a pickup.
+/// Polls 4x per second to keep state in sync with world.
+class InteractButton extends StatefulWidget {
+  const InteractButton({super.key, required this.game});
+  final PixelDungeonGame game;
+
+  @override
+  State<InteractButton> createState() => _InteractButtonState();
+}
+
+class _InteractButtonState extends State<InteractButton> {
+  InteractablePickup? _nearby;
+  late final Stream<int> _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Stream.periodic(const Duration(milliseconds: 200), (i) => i);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: _ticker,
+      builder: (context, _) {
+        _nearby = widget.game.nearestPickup();
+        if (_nearby == null) return const SizedBox.shrink();
+        return GestureDetector(
+          onTap: () {
+            widget.game.triggerInteract();
+            setState(() => _nearby = null);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xCCFFD700),
+              borderRadius: BorderRadius.circular(40),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: const [
+                BoxShadow(color: Color(0x55000000), blurRadius: 6, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.touch_app, color: Colors.black, size: 22),
+                const SizedBox(width: 6),
+                Text(
+                  _nearby!.pickupLabel,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
