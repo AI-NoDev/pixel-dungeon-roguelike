@@ -17,6 +17,7 @@ class WaveSystem {
   int currentWave = 0;
   int totalWaves = 2;
   bool _waveActive = false;
+  int _pendingSpawns = 0;
   final List<Enemy> _liveEnemies = [];
   final Random _random = Random();
 
@@ -24,6 +25,7 @@ class WaveSystem {
     currentWave = 0;
     totalWaves = waveCount;
     _waveActive = false;
+    _pendingSpawns = 0;
     _liveEnemies.clear();
     _spawnNextWave(spawner);
   }
@@ -32,7 +34,8 @@ class WaveSystem {
     if (!_waveActive) return;
     // Remove dead/removed enemies from tracking
     _liveEnemies.removeWhere((e) => e.isDead || e.isRemoved);
-    if (_liveEnemies.isEmpty) {
+    // Wait for both pending markers and live enemies to finish before advancing
+    if (_liveEnemies.isEmpty && _pendingSpawns == 0) {
       _waveActive = false;
       if (currentWave < totalWaves) {
         Future.delayed(const Duration(milliseconds: 800), () {
@@ -53,6 +56,7 @@ class WaveSystem {
 
     final config = game.currentFloorConfig;
     final waveSize = (config.baseEnemyCount * (0.6 + 0.3 * currentWave)).ceil();
+    _pendingSpawns += waveSize;
 
     for (int i = 0; i < waveSize; i++) {
       final pos = _randomSpawnPosition();
@@ -111,5 +115,6 @@ class WaveSystem {
     ));
     game.world.add(enemy);
     _liveEnemies.add(enemy);
+    if (_pendingSpawns > 0) _pendingSpawns--;
   }
 }

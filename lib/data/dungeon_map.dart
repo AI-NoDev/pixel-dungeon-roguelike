@@ -132,9 +132,6 @@ class DungeonMap {
       orElse: () => rooms.last,
     );
 
-    // Mark start room as visited (player starts here)
-    rooms[0] = rooms[0].copyWith(visited: true);
-
     return DungeonMap(
       rooms: rooms,
       corridors: corridors,

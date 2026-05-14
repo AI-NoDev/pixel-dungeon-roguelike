@@ -93,9 +93,11 @@ class PixelDungeonGame extends FlameGame
     camera.follow(player);
     camera.viewfinder.zoom = 1.2;
 
-    // Mark start room as visited
+    // Trigger the start room encounter immediately so the player is
+    // greeted by the first wave the moment the floor loads.
     currentRoom = startRoom;
     startRoom.visited = true;
+    _triggerRoomEncounter(startRoom);
   }
 
   void _applyHeroStats() {

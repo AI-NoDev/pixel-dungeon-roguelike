@@ -10,7 +10,6 @@ import '../systems/element_system.dart';
 import '../components/item_drop.dart';
 import 'bullet.dart';
 import 'decal.dart';
-import 'dungeon_room.dart';
 import 'enemies/slime_species.dart';
 import 'floating_text.dart';
 import '../data/dungeon_map.dart' show RoomNode;
