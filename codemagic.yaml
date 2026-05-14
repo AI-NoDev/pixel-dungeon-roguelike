@@ -44,13 +44,13 @@ workflows:
         script: flutter packages pub get
       - name: Flutter analyze
         script: flutter analyze --no-fatal-infos
+      - name: Build Android APK (debug)
+        script: flutter build apk --debug
       - name: Build iOS debug
         script: flutter build ios --debug --no-codesign
-      - name: Build Android debug
-        script: flutter build appbundle --debug
     artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
       - build/ios/iphoneos/*.app
-      - build/app/outputs/**/*.aab
     triggering:
       events:
         - push
