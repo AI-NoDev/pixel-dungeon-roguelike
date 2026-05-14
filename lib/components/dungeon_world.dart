@@ -181,22 +181,32 @@ class RoomVisual extends PositionComponent
   final DungeonTheme theme;
   final Map<RoomSide, _DoorRange?> doors;
 
-  late RectangleComponent floor;
   final Random _rng = Random();
+
+  // Pre-computed grid line offsets (drawn once per frame in render()
+  // instead of as 300+ child components, which was murdering GPU perf).
+  late final List<double> _gridXs;
+  late final List<double> _gridYs;
+  late final Paint _floorPaint;
+  late final Paint _gridPaint;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Floor
-    floor = RectangleComponent(
-      size: size,
-      paint: Paint()..color = theme.floorColor,
-    );
-    add(floor);
+    _floorPaint = Paint()..color = theme.floorColor;
+    _gridPaint = Paint()
+      ..color = theme.accentColor.withValues(alpha: 0.06)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
 
-    // Subtle grid pattern for floor texture
-    _addFloorTiles();
+    const tileSize = 40.0;
+    _gridXs = [
+      for (double x = 0; x < size.x; x += tileSize) x,
+    ];
+    _gridYs = [
+      for (double y = 0; y < size.y; y += tileSize) y,
+    ];
 
     // Decoration sprites scattered around the room (no hitbox).
     await _addDecor();
@@ -205,7 +215,24 @@ class RoomVisual extends PositionComponent
     _buildWalls();
   }
 
-  /// Pick 3-7 random decor pieces and place them around the room walls.
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    // Floor as one rectangle.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, size.y),
+      _floorPaint,
+    );
+    // Grid as a single batch of line draws (no per-tile components).
+    for (final x in _gridXs) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.y), _gridPaint);
+    }
+    for (final y in _gridYs) {
+      canvas.drawLine(Offset(0, y), Offset(size.x, y), _gridPaint);
+    }
+  }
+
+  /// Pick 2-4 random decor pieces and place them around the room walls.
   Future<void> _addDecor() async {
     // Decor pool depends on theme
     final wallDecor = const ['torch_a', 'torch_b', 'banner', 'chain', 'cobweb'];
@@ -214,7 +241,7 @@ class RoomVisual extends PositionComponent
       'crystal', 'mushroom', 'crack', 'tile_dark', 'grate',
     ];
 
-    final count = 3 + _rng.nextInt(5);
+    final count = 2 + _rng.nextInt(3);
     for (int i = 0; i < count; i++) {
       final isWall = _rng.nextBool();
       final pool = isWall ? wallDecor : floorDecor;
@@ -254,23 +281,6 @@ class RoomVisual extends PositionComponent
       80 + _rng.nextDouble() * (size.x - 160),
       80 + _rng.nextDouble() * (size.y - 160),
     );
-  }
-
-  void _addFloorTiles() {
-    final tileSize = 40.0;
-    final tilePaint = Paint()
-      ..color = theme.accentColor.withValues(alpha: 0.06)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (double x = 0; x < size.x; x += tileSize) {
-      for (double y = 0; y < size.y; y += tileSize) {
-        add(RectangleComponent(
-          size: Vector2(tileSize, tileSize),
-          position: Vector2(x, y),
-          paint: tilePaint,
-        ));
-      }
-    }
   }
 
   void _buildWalls() {

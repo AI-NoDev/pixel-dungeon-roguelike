@@ -411,12 +411,14 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     ));
 
     // Blood splat decal at feet
-    game.world.add(Decal(
+    final blood = Decal(
       position: position + Vector2(0, 8),
       type: DecalType.bloodSplat,
       color: const Color(0xFF7F0000),
       size_: 14,
-    ));
+    );
+    game.world.add(blood);
+    DecalManager.track(blood);
 
     AudioSystem.playPlayerHit();
     game.shake(6, 0.25);

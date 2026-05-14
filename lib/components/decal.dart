@@ -174,3 +174,28 @@ enum DecalType {
   bloodSplat,    // Player/enemy hit splatter
   scorch,        // Fire/explosion burn mark
 }
+
+/// Bounded queue for active Decal components. When the cap is exceeded
+/// the oldest decal is removed so the world doesn't accumulate hundreds
+/// of objects causing render-stutter.
+class DecalManager {
+  static const int maxDecals = 80;
+  static final List<Decal> _active = [];
+
+  /// Track a newly added decal. The component must already be attached to
+  /// the world by the caller.
+  static void track(Decal d) {
+    _active.add(d);
+    while (_active.length > maxDecals) {
+      final old = _active.removeAt(0);
+      if (!old.isRemoved) old.removeFromParent();
+    }
+  }
+
+  static void clearAll() {
+    for (final d in _active) {
+      if (!d.isRemoved) d.removeFromParent();
+    }
+    _active.clear();
+  }
+}

@@ -24,6 +24,19 @@ class AudioSystem {
     'explosion.wav',
   ];
 
+  /// Per-sound cooldown table (millis since last play). Throttles spammy
+  /// sounds (rapid-fire weapons, multi-bullet hits) to avoid audio
+  /// pipeline overload that causes frame stutter.
+  static final Map<String, int> _lastPlayedAt = {};
+
+  /// Minimum gap between repeats per sound. Tuned to avoid stutter on
+  /// fast-fire weapons while keeping the audio feedback responsive.
+  static const Map<String, int> _minGapMs = {
+    'shoot.wav': 50,        // SMG fires up to 12/s -> cap at 20/s
+    'hit.wav': 35,
+    'pickup_gold.wav': 60,
+  };
+
   static Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
@@ -36,6 +49,14 @@ class AudioSystem {
 
   static void _play(String name, {double? vol}) {
     if (!sfxEnabled) return;
+    // Throttle spammy sounds.
+    final gap = _minGapMs[name];
+    if (gap != null) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final last = _lastPlayedAt[name] ?? 0;
+      if (now - last < gap) return;
+      _lastPlayedAt[name] = now;
+    }
     try {
       FlameAudio.play(name, volume: vol ?? sfxVolume);
     } catch (_) {}

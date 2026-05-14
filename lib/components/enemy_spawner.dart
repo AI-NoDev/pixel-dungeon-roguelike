@@ -187,12 +187,14 @@ class Enemy extends PositionComponent
     // Spawn particles
     ParticleSystem.spawnDeathEffect(game.world, position, color);
     // Leave corpse decal (permanent for the room)
-    game.world.add(Decal(
+    final corpse = Decal(
       position: position.clone(),
       type: DecalType.corpse,
       color: color,
       size_: 16,
-    ));
+    );
+    game.world.add(corpse);
+    DecalManager.track(corpse);
     // Try to drop item
     ItemDropSystem.trySpawnDrop(game, position);
     removeFromParent();
@@ -208,12 +210,14 @@ class Enemy extends PositionComponent
         ElementSystem.applyElement(game, this, other.element, other.damage);
       }
       // Leave a small bullet decal at impact point
-      game.world.add(Decal(
+      final hole = Decal(
         position: other.position.clone(),
         type: DecalType.bulletHole,
         color: Colors.black,
         size_: 6,
-      ));
+      );
+      game.world.add(hole);
+      DecalManager.track(hole);
       other.removeFromParent();
     }
   }

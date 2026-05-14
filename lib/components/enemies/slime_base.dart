@@ -202,12 +202,14 @@ abstract class SlimeBase extends Enemy {
     ParticleSystem.spawnDeathEffect(game.world, position, color);
 
     // Leave a slime puddle on the ground (permanent for room)
-    game.world.add(Decal(
+    final puddle = Decal(
       position: position.clone(),
       type: DecalType.slimePuddle,
       color: color,
       size_: canvasSize,
-    ));
+    );
+    game.world.add(puddle);
+    DecalManager.track(puddle);
 
     // Play death animation, then remove
     _setState(SlimeAnimState.death);

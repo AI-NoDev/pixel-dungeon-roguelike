@@ -282,6 +282,7 @@ class PixelDungeonGame extends FlameGame
     world.children.whereType<Enemy>().forEach((e) => e.removeFromParent());
     world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
     world.children.whereType<Decal>().forEach((d) => d.removeFromParent());
+    DecalManager.clearAll();
     world.children.whereType<TalentPickup>().forEach((t) => t.removeFromParent());
     world.children.whereType<WeaponPickupDrop>().forEach((w) => w.removeFromParent());
     currentBoss?.removeFromParent();
