@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../i18n/app_localizations.dart';
+import '../systems/audio_system.dart';
 
 class LoadingScreen extends StatefulWidget {
   final VoidCallback onLoaded;
@@ -29,6 +30,7 @@ class _LoadingScreenState extends State<LoadingScreen>
 
   Future<void> _startLoading() async {
     _controller.forward();
+    AudioSystem.playMenuBgm();
     await Future.delayed(const Duration(milliseconds: 1600));
     if (mounted) widget.onLoaded();
   }

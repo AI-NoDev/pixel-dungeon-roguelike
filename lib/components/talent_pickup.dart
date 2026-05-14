@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../data/talents.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../systems/audio_system.dart';
 import 'pickup_base.dart';
 
 /// A talent scroll that drops on the ground. Walking near it shows a prompt;
@@ -61,6 +62,7 @@ class TalentPickup extends PositionComponent
   void interact() {
     if (_consumed) return;
     _consumed = true;
+    AudioSystem.playPickupTalent();
     game.pendingTalentChoices = choices;
     game.onShowTalentPicker?.call();
     game.pauseEngine();

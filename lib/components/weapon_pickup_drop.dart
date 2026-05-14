@@ -4,6 +4,7 @@ import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 import '../data/weapons.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../systems/audio_system.dart';
 import 'pickup_base.dart';
 
 /// A weapon dropped on the floor. Walking near shows a prompt; pressing the
@@ -70,6 +71,7 @@ class WeaponPickupDrop extends PositionComponent
   void interact() {
     if (_consumed) return;
     _consumed = true;
+    AudioSystem.playPickupWeapon();
     // Drop the player's previous secondary back to the floor (so the player
     // can keep the weapon they just dropped).
     final prev = game.player.secondaryWeapon;

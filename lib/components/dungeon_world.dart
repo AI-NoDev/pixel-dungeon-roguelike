@@ -198,8 +198,62 @@ class RoomVisual extends PositionComponent
     // Subtle grid pattern for floor texture
     _addFloorTiles();
 
+    // Decoration sprites scattered around the room (no hitbox).
+    await _addDecor();
+
     // Walls (will be cut where corridors connect)
     _buildWalls();
+  }
+
+  /// Pick 3-7 random decor pieces and place them around the room walls.
+  Future<void> _addDecor() async {
+    // Decor pool depends on theme
+    final wallDecor = const ['torch_a', 'torch_b', 'banner', 'chain', 'cobweb'];
+    final floorDecor = const [
+      'barrel', 'crate', 'skull', 'bones',
+      'crystal', 'mushroom', 'crack', 'tile_dark', 'grate',
+    ];
+
+    final count = 3 + _rng.nextInt(5);
+    for (int i = 0; i < count; i++) {
+      final isWall = _rng.nextBool();
+      final pool = isWall ? wallDecor : floorDecor;
+      final id = pool[_rng.nextInt(pool.length)];
+      final pos = isWall ? _wallSpot() : _floorSpot();
+      try {
+        final image = await game.images.load('decor/$id.png');
+        add(SpriteComponent(
+          sprite: Sprite(image),
+          size: Vector2.all(28),
+          anchor: Anchor.topLeft,
+          position: pos,
+        ));
+      } catch (_) {}
+    }
+  }
+
+  Vector2 _wallSpot() {
+    // Pick a side, then pick a position along it (skip near doors)
+    final side = _rng.nextInt(4);
+    final t = DungeonWorld.wallThickness.toDouble();
+    switch (side) {
+      case 0: // top
+        return Vector2(40 + _rng.nextDouble() * (size.x - 80), t + 4);
+      case 1: // bottom
+        return Vector2(40 + _rng.nextDouble() * (size.x - 80), size.y - t - 32);
+      case 2: // left
+        return Vector2(t + 4, 40 + _rng.nextDouble() * (size.y - 80));
+      default: // right
+        return Vector2(size.x - t - 32, 40 + _rng.nextDouble() * (size.y - 80));
+    }
+  }
+
+  Vector2 _floorSpot() {
+    // Stay within inner area (not against walls)
+    return Vector2(
+      80 + _rng.nextDouble() * (size.x - 160),
+      80 + _rng.nextDouble() * (size.y - 160),
+    );
   }
 
   void _addFloorTiles() {

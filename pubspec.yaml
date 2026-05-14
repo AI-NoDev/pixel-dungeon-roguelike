@@ -79,6 +79,7 @@ flutter:
     - assets/images/weapons/
     - assets/images/bullets/
     - assets/images/heroes/
+    - assets/images/decor/
     - assets/audio/
     - assets/tiles/
 

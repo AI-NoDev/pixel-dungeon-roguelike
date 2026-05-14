@@ -7,6 +7,7 @@ import '../data/floor_config.dart';
 import '../data/weapons.dart';
 import '../systems/particle_system.dart';
 import '../systems/element_system.dart';
+import '../systems/audio_system.dart';
 import '../components/item_drop.dart';
 import 'bullet.dart';
 import 'decal.dart';
@@ -153,6 +154,13 @@ class Enemy extends PositionComponent
       isCritical: isCritical,
     ));
 
+    // Hit SFX
+    if (isCritical) {
+      AudioSystem.playCrit();
+    } else {
+      AudioSystem.playHit();
+    }
+
     body.paint.color = Colors.white;
     Future.delayed(const Duration(milliseconds: 80), () {
       if (!isDead) body.paint.color = color;
@@ -169,6 +177,8 @@ class Enemy extends PositionComponent
     game.gameState.enemiesKilled++;
     final goldDrop = 10 + Random().nextInt(10);
     game.gameState.gold += goldDrop;
+    AudioSystem.playEnemyDeath();
+    AudioSystem.playPickupGold();
     // Show gold pickup text
     game.world.add(FloatingText.gold(
       position + Vector2(0, 4),

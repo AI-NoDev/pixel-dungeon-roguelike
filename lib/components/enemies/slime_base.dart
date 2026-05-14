@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 import '../../systems/particle_system.dart';
+import '../../systems/audio_system.dart';
 import '../enemy_spawner.dart';
 import '../floating_text.dart';
 import '../decal.dart';
@@ -157,6 +158,13 @@ abstract class SlimeBase extends Enemy {
       isCritical: isCritical,
     ));
 
+    // Hit SFX
+    if (isCritical) {
+      AudioSystem.playCrit();
+    } else {
+      AudioSystem.playHit();
+    }
+
     // Trigger hurt animation state
     if (hp > 0) {
       _setState(SlimeAnimState.hurt);
@@ -178,6 +186,8 @@ abstract class SlimeBase extends Enemy {
     game.gameState.enemiesKilled++;
     final goldDrop = 10 + (DateTime.now().millisecondsSinceEpoch % 10);
     game.gameState.gold += goldDrop;
+    AudioSystem.playEnemyDeath();
+    AudioSystem.playPickupGold();
 
     // Show gold pickup text
     game.world.add(FloatingText.gold(

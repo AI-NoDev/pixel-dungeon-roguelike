@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../components/player.dart';
 import '../components/dungeon_world.dart';
 import '../components/enemy_spawner.dart';
@@ -24,6 +25,7 @@ import '../data/dungeon_theme.dart';
 import '../data/dungeon_map.dart';
 import '../data/boss_data.dart';
 import '../data/heroes.dart';
+import '../systems/audio_system.dart';
 
 class PixelDungeonGame extends FlameGame
     with HasCollisionDetection, HasKeyboardHandlerComponents {
@@ -32,6 +34,16 @@ class PixelDungeonGame extends FlameGame
   late EnemySpawner enemySpawner;
   late CombatSystem combatSystem;
   late FogOfWar fogOfWar;
+
+  // Camera shake
+  double _shakeIntensity = 0;
+  double _shakeTimer = 0;
+
+  /// Trigger camera shake. [intensity] in pixels, [duration] seconds.
+  void shake(double intensity, double duration) {
+    if (intensity > _shakeIntensity) _shakeIntensity = intensity;
+    if (duration > _shakeTimer) _shakeTimer = duration;
+  }
 
   final GameState gameState = GameState();
   final InputSystem inputSystem = InputSystem();
@@ -100,6 +112,9 @@ class PixelDungeonGame extends FlameGame
     currentRoom = startRoom;
     startRoom.visited = true;
     _triggerRoomEncounter(startRoom);
+
+    // Play dungeon BGM.
+    AudioSystem.playDungeonBgm();
   }
 
   void _applyHeroStats() {
@@ -116,6 +131,22 @@ class PixelDungeonGame extends FlameGame
     combatSystem.update(dt);
     skillSystem.update(dt);
     enemySpawner.update(dt);
+
+    // Camera shake — offsets the viewfinder by random small amount.
+    if (_shakeTimer > 0) {
+      _shakeTimer -= dt;
+      final pct = (_shakeTimer / 0.3).clamp(0.0, 1.0);
+      final amp = _shakeIntensity * pct;
+      final r = math.Random();
+      camera.viewfinder.position += Vector2(
+        (r.nextDouble() - 0.5) * amp,
+        (r.nextDouble() - 0.5) * amp,
+      );
+      if (_shakeTimer <= 0) {
+        _shakeIntensity = 0;
+        _shakeTimer = 0;
+      }
+    }
 
     // Detect room transitions for fog of war + spawn triggers
     final newRoom = dungeonWorld.roomAt(player.position);

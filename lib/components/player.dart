@@ -13,6 +13,8 @@ import 'enemy_spawner.dart';
 import 'floating_text.dart';
 import 'aura_effect.dart';
 import 'decal.dart';
+import 'muzzle_flash.dart';
+import '../systems/audio_system.dart';
 
 class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, CollisionCallbacks {
   Player({required Vector2 position, this.heroType = HeroType.knight})
@@ -296,6 +298,26 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       game.world.add(bullet);
     }
 
+    // Muzzle flash at end of weapon
+    final muzzlePos = position + Vector2(cos(baseAngle), sin(baseAngle)) * 22;
+    game.world.add(MuzzleFlash(
+      position: muzzlePos,
+      angle: baseAngle,
+      color: w.color,
+      size_: shotsThis > 1 ? 24 : 18,
+    ));
+
+    // SFX based on weapon type
+    AudioSystem.playShoot(_audioStyleFor(w));
+
+    // Subtle screen shake on heavy weapons
+    if (w.type.toString().contains('rocket') ||
+        w.type.toString().contains('sniper')) {
+      game.shake(4, 0.18);
+    } else if (isCritical) {
+      game.shake(2, 0.1);
+    }
+
     // Consume ammo if firing the secondary
     if (secondaryWeapon != null && secondaryWeapon == w && secondaryAmmo > 0) {
       secondaryAmmo--;
@@ -314,6 +336,15 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
         game.onStateChanged?.call();
       }
     }
+  }
+
+  String _audioStyleFor(WeaponData w) {
+    final t = w.type.toString();
+    if (t.contains('rocket') || t.contains('sniper') || t.contains('crossbow')) {
+      return 'heavy';
+    }
+    if (t.contains('laser')) return 'laser';
+    return 'normal';
   }
 
   /// Equip a weapon picked up from the floor. The starter pistol is never
@@ -342,6 +373,8 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     if (talent.healAmount > 0) {
       heal(talent.healAmount);
     }
+
+    AudioSystem.playLevelUp();
 
     // Spawn ascension aura (level up effect)
     game.world.add(AuraEffect(
@@ -384,6 +417,9 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       color: const Color(0xFF7F0000),
       size_: 14,
     ));
+
+    AudioSystem.playPlayerHit();
+    game.shake(6, 0.25);
 
     // Hurt animation flash
     if (_animComp != null && _hurtAnim != null) {
