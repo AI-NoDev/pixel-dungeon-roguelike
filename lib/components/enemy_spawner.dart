@@ -10,6 +10,7 @@ import '../systems/element_system.dart';
 import '../components/item_drop.dart';
 import 'bullet.dart';
 import 'dungeon_room.dart';
+import 'enemies/slime_species.dart';
 
 /// Base enemy class
 class Enemy extends PositionComponent
@@ -190,7 +191,7 @@ class MageEnemy extends Enemy {
         );
 
   @override
-  void _shoot() {
+  void shoot() {
     // Mage shoots 3 bullets in a spread
     final player = game.player;
     final baseDir = (player.position - position).normalized();
@@ -288,41 +289,64 @@ class EnemySpawner {
     final roll = _random.nextDouble();
 
     Enemy enemy;
-    if (difficulty < 3) {
-      if (roll < 0.35) {
-        enemy = SlimeEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.6) {
-        enemy = GoblinEnemy(position: position, difficulty: difficulty);
+
+    // Floor 1-2: Easy slimes
+    if (difficulty <= 2) {
+      if (roll < 0.5) {
+        enemy = GreenSlime(position: position, difficulty: difficulty);
       } else if (roll < 0.85) {
-        enemy = SkeletonEnemy(position: position, difficulty: difficulty);
+        enemy = PinkBouncer(position: position, difficulty: difficulty);
       } else {
-        enemy = BomberEnemy(position: position, difficulty: difficulty);
+        enemy = AcidSpitter(position: position, difficulty: difficulty);
       }
-    } else if (difficulty < 8) {
-      if (roll < 0.2) {
-        enemy = SlimeEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.4) {
-        enemy = GoblinEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.6) {
-        enemy = SkeletonEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.8) {
-        enemy = MageEnemy(position: position, difficulty: difficulty);
+    }
+    // Floor 3-4: Add elemental slimes
+    else if (difficulty <= 4) {
+      if (roll < 0.20) {
+        enemy = GreenSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.35) {
+        enemy = PinkBouncer(position: position, difficulty: difficulty);
+      } else if (roll < 0.50) {
+        enemy = AcidSpitter(position: position, difficulty: difficulty);
+      } else if (roll < 0.65) {
+        enemy = BlueFrostJelly(position: position, difficulty: difficulty);
+      } else if (roll < 0.78) {
+        enemy = LavaBubbler(position: position, difficulty: difficulty);
+      } else if (roll < 0.88) {
+        enemy = ToxicGoo(position: position, difficulty: difficulty);
+      } else if (roll < 0.95) {
+        enemy = MegaGoo(position: position, difficulty: difficulty);
       } else {
-        enemy = BomberEnemy(position: position, difficulty: difficulty);
+        enemy = BombSlime(position: position, difficulty: difficulty);
       }
-    } else {
-      if (roll < 0.15) {
-        enemy = SlimeEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.3) {
-        enemy = GoblinEnemy(position: position, difficulty: difficulty);
+    }
+    // Floor 5+: All slimes including mutants
+    else {
+      // 0.5% chance of legendary Rainbow Slime
+      if (roll < 0.005) {
+        enemy = RainbowSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.15) {
+        enemy = GreenSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.25) {
+        enemy = ThunderJolt(position: position, difficulty: difficulty);
+      } else if (roll < 0.35) {
+        enemy = SpikeSlime(position: position, difficulty: difficulty);
       } else if (roll < 0.45) {
-        enemy = SkeletonEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.6) {
-        enemy = MageEnemy(position: position, difficulty: difficulty);
-      } else if (roll < 0.75) {
-        enemy = GolemEnemy(position: position, difficulty: difficulty);
+        enemy = TarSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.55) {
+        enemy = MutantSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.65) {
+        enemy = CrystallineSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.72) {
+        enemy = RegeneratingSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.80) {
+        enemy = BombSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.86) {
+        enemy = CorrosiveSlime(position: position, difficulty: difficulty);
+      } else if (roll < 0.92) {
+        enemy = PhantomSlime(position: position, difficulty: difficulty);
       } else {
-        enemy = BomberEnemy(position: position, difficulty: difficulty);
+        enemy = MagneticSlime(position: position, difficulty: difficulty);
       }
     }
 
@@ -336,14 +360,21 @@ class EnemySpawner {
   }
 
   Enemy _createEliteEnemy(Vector2 position, FloorConfig config) {
-    final enemy = _createRandomEnemy(position, config);
-    // Elite enemies are 50% stronger
-    enemy.maxHp *= 1.5;
+    final difficulty = config.floorNumber;
+    final roll = _random.nextDouble();
+
+    Enemy enemy;
+    if (roll < 0.35) {
+      enemy = SlimeKnight(position: position, difficulty: difficulty);
+    } else if (roll < 0.7) {
+      enemy = SlimeMage(position: position, difficulty: difficulty);
+    } else {
+      enemy = KingsGuard(position: position, difficulty: difficulty);
+    }
+
+    enemy.maxHp *= config.enemyHpMultiplier;
     enemy.hp = enemy.maxHp;
-    enemy.contactDamage *= 1.3;
-    enemy.speed *= 1.2;
-    // Visual: slightly larger
-    enemy.size = Vector2(28, 28);
+    enemy.contactDamage *= config.enemyDamageMultiplier;
     return enemy;
   }
 }

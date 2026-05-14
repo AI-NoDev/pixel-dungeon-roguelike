@@ -1,12 +1,14 @@
-import 'dart:math';
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
-import '../../game/pixel_dungeon_game.dart';
 import '../../systems/particle_system.dart';
 import '../enemy_spawner.dart';
 
-/// Base class for all slime variants
-/// Provides bouncing animation and slime-specific behaviors
+/// Animation states for slimes
+enum SlimeAnimState { idle, jump, hurt, death }
+
+/// Base class for all slime variants - uses sprite animations
 abstract class SlimeBase extends Enemy {
   SlimeBase({
     required super.position,
@@ -16,62 +18,97 @@ abstract class SlimeBase extends Enemy {
     required super.color,
     super.shootInterval,
     super.bulletDamage,
-  });
+    this.spriteId = 'green',
+    this.canvasSize = 16,
+  }) : super(
+         // Larger hitbox for big slimes
+       );
 
-  // Bouncing animation
-  double _bounceTimer = 0;
-  double _bounceOffset = 0;
-  double get bounceFrequency => 4.0;
+  /// Sprite ID (matches filename: slime_[id]_idle.png etc.)
+  final String spriteId;
 
-  // Color palette
-  Color get highlightColor => _lighten(color, 0.3);
-  Color get shadowColor => _darken(color, 0.4);
+  /// Canvas size of source sprite (16, 24, 48, or 60)
+  final int canvasSize;
 
-  // Optional slime body
-  RectangleComponent? slimeShadow;
-  RectangleComponent? slimeHighlight;
+  /// Animation duration map
+  static const _idleStepTime = 0.16;  // 6fps
+  static const _jumpStepTime = 0.12;  // 8fps
+  static const _hurtStepTime = 0.10;  // 10fps
+  static const _deathStepTime = 0.10; // 10fps
+
+  // Animation components
+  SpriteAnimationComponent? _animComponent;
+  SpriteAnimation? _idleAnim;
+  SpriteAnimation? _jumpAnim;
+  SpriteAnimation? _hurtAnim;
+  SpriteAnimation? _deathAnim;
+
+  SlimeAnimState _currentState = SlimeAnimState.idle;
+  bool _isMoving = false;
+
+  /// Display size (rendered larger than source for visibility)
+  double get displayScale => 2.0;
+
+  Vector2 get _displaySize => Vector2.all(canvasSize * displayScale);
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    // Replace simple body with slime-shaped visual
-    body.removeFromParent();
 
-    // Shadow at bottom (small dark oval)
-    slimeShadow = RectangleComponent(
-      size: Vector2(18, 4),
-      position: Vector2(3, 18),
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.3),
+    // Adjust component size based on canvas
+    size = _displaySize;
+
+    // Remove default body (color rectangle)
+    if (children.whereType<RectangleComponent>().isNotEmpty) {
+      removeAll(children.whereType<RectangleComponent>());
+    }
+
+    try {
+      _idleAnim = await _loadAnimation('idle', _idleStepTime, true);
+      _jumpAnim = await _loadAnimation('jump', _jumpStepTime, true);
+      _hurtAnim = await _loadAnimation('hurt', _hurtStepTime, false);
+      _deathAnim = await _loadAnimation('death', _deathStepTime, false);
+    } catch (e) {
+      // Sprite missing fallback - use color rectangle
+      _addColorFallback();
+      return;
+    }
+
+    _animComponent = SpriteAnimationComponent(
+      animation: _idleAnim,
+      size: _displaySize,
+      anchor: Anchor.topLeft,
     );
-    add(slimeShadow!);
+    add(_animComponent!);
 
-    // Main body (slime shape)
-    body = RectangleComponent(
-      size: Vector2(20, 16),
-      position: Vector2(2, 6),
+    // Re-add hitbox
+    add(RectangleHitbox(size: _displaySize * 0.7,
+        position: _displaySize * 0.15));
+  }
+
+  Future<SpriteAnimation> _loadAnimation(String state, double stepTime, bool loop) async {
+    final image = await game.images.load('slimes/slime_${spriteId}_$state.png');
+    final frameCount = image.width ~/ canvasSize;
+    final spriteSheet = SpriteSheet(
+      image: image,
+      srcSize: Vector2.all(canvasSize.toDouble()),
+    );
+    return spriteSheet.createAnimation(
+      row: 0,
+      stepTime: stepTime,
+      to: frameCount,
+      loop: loop,
+    );
+  }
+
+  void _addColorFallback() {
+    // Fallback if sprites missing
+    add(RectangleComponent(
+      size: _displaySize * 0.8,
+      position: _displaySize * 0.1,
       paint: Paint()..color = color,
-    );
-    add(body);
-
-    // Highlight (top-left, gives it a glossy 3D look)
-    slimeHighlight = RectangleComponent(
-      size: Vector2(6, 4),
-      position: Vector2(5, 8),
-      paint: Paint()..color = highlightColor,
-    );
-    add(slimeHighlight!);
-
-    // Eyes
-    add(RectangleComponent(
-      size: Vector2(2, 2),
-      position: Vector2(8, 12),
-      paint: Paint()..color = Colors.black,
     ));
-    add(RectangleComponent(
-      size: Vector2(2, 2),
-      position: Vector2(14, 12),
-      paint: Paint()..color = Colors.black,
-    ));
+    add(RectangleHitbox(size: _displaySize * 0.7, position: _displaySize * 0.15));
   }
 
   @override
@@ -79,13 +116,46 @@ abstract class SlimeBase extends Enemy {
     super.update(dt);
     if (isDead) return;
 
-    // Bouncing animation
-    _bounceTimer += dt * bounceFrequency;
-    _bounceOffset = (sin(_bounceTimer).abs()) * 3;
-    if (slimeHighlight != null) {
-      slimeHighlight!.position = Vector2(5, 8 - _bounceOffset * 0.3);
+    // Detect motion to switch animation
+    final movingNow = moveDirection.length > 0;
+    if (movingNow != _isMoving) {
+      _isMoving = movingNow;
+      _setState(_isMoving ? SlimeAnimState.jump : SlimeAnimState.idle);
     }
-    body.position = Vector2(2, 6 - _bounceOffset * 0.5);
+  }
+
+  /// Track movement intent (set by enemy AI)
+  Vector2 moveDirection = Vector2.zero();
+
+  void _setState(SlimeAnimState state) {
+    if (_currentState == state || _animComponent == null) return;
+    _currentState = state;
+    switch (state) {
+      case SlimeAnimState.idle:
+        if (_idleAnim != null) _animComponent!.animation = _idleAnim;
+        break;
+      case SlimeAnimState.jump:
+        if (_jumpAnim != null) _animComponent!.animation = _jumpAnim;
+        break;
+      case SlimeAnimState.hurt:
+        if (_hurtAnim != null) _animComponent!.animation = _hurtAnim;
+        break;
+      case SlimeAnimState.death:
+        if (_deathAnim != null) _animComponent!.animation = _deathAnim;
+        break;
+    }
+  }
+
+  @override
+  void takeDamage(double damage) {
+    if (isDead) return;
+    super.takeDamage(damage);
+    if (!isDead) {
+      _setState(SlimeAnimState.hurt);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!isDead) _setState(_isMoving ? SlimeAnimState.jump : SlimeAnimState.idle);
+      });
+    }
   }
 
   /// Override for slime-specific death effects
@@ -93,18 +163,21 @@ abstract class SlimeBase extends Enemy {
 
   @override
   void onDeath() {
+    // Stats
+    game.gameState.enemiesKilled++;
+    game.gameState.gold += 10;
+
+    // Slime-specific death effects (subclasses override)
     onSlimeDeath();
-    super.onDeath();
-  }
 
-  static Color _lighten(Color c, double amount) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0)).toColor();
-  }
+    // Particles
+    ParticleSystem.spawnDeathEffect(game.world, position, color);
 
-  static Color _darken(Color c, double amount) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+    // Play death animation, then remove
+    _setState(SlimeAnimState.death);
+    Future.delayed(const Duration(milliseconds: 600), () {
+      removeFromParent();
+    });
   }
 }
 
