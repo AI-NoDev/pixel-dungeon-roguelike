@@ -5,8 +5,9 @@ import 'joystick_widget.dart';
 import 'hud_widget.dart';
 import 'talent_picker.dart';
 import 'weapon_pickup.dart';
+import 'shop_widget.dart';
 
-enum OverlayState { playing, talentPicker, weaponPickup, gameOver }
+enum OverlayState { playing, talentPicker, weaponPickup, shop, gameOver }
 
 class GameOverlay extends StatefulWidget {
   final PixelDungeonGame game;
@@ -37,6 +38,9 @@ class _GameOverlayState extends State<GameOverlay> {
     };
     widget.game.onShowWeaponPickup = () {
       setState(() => _state = OverlayState.weaponPickup);
+    };
+    widget.game.onShowShop = () {
+      setState(() => _state = OverlayState.shop);
     };
 
     final originalOnStateChanged = widget.game.onStateChanged;
@@ -170,6 +174,16 @@ class _GameOverlayState extends State<GameOverlay> {
             },
             onDecline: () {
               widget.game.onWeaponDeclined();
+              setState(() => _state = OverlayState.playing);
+            },
+          ),
+
+        // Shop overlay
+        if (_state == OverlayState.shop)
+          ShopWidget(
+            game: widget.game,
+            onClose: () {
+              widget.game.resumeEngine();
               setState(() => _state = OverlayState.playing);
             },
           ),

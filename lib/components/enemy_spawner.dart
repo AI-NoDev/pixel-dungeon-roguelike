@@ -4,6 +4,8 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../data/floor_config.dart';
+import '../systems/particle_system.dart';
+import '../components/item_drop.dart';
 import 'bullet.dart';
 import 'dungeon_room.dart';
 
@@ -106,6 +108,10 @@ class Enemy extends PositionComponent
   void _onDeath() {
     game.gameState.enemiesKilled++;
     game.gameState.gold += (10 + Random().nextInt(10));
+    // Spawn particles
+    ParticleSystem.spawnDeathEffect(game.world, position, color);
+    // Try to drop item
+    ItemDropSystem.trySpawnDrop(game, position);
     removeFromParent();
   }
 

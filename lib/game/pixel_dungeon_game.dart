@@ -127,6 +127,9 @@ class PixelDungeonGame extends FlameGame
     currentRoom.enemies.clear(); // Boss room uses boss tracking instead
   }
 
+  // Shop state
+  VoidCallback? onShowShop;
+
   void _handleSpecialRoom(RoomType type) {
     switch (type) {
       case RoomType.rest:
@@ -140,7 +143,8 @@ class PixelDungeonGame extends FlameGame
         pauseEngine();
         break;
       case RoomType.shop:
-        // TODO: Implement shop UI
+        onShowShop?.call();
+        pauseEngine();
         break;
       default:
         break;

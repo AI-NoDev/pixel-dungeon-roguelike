@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
+import 'minimap_widget.dart';
 
 class HudWidget extends StatelessWidget {
   final PixelDungeonGame game;
@@ -26,6 +27,11 @@ class HudWidget extends StatelessWidget {
                 const Spacer(),
                 _buildGoldDisplay(),
               ],
+            ),
+            // Minimap (room progress)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: MinimapWidget(game: game),
             ),
             // Boss HP bar (if in boss room)
             if (game.currentBoss != null && !(game.currentBoss!.isDead))
