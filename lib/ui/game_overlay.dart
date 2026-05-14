@@ -10,8 +10,13 @@ enum OverlayState { playing, talentPicker, weaponPickup, gameOver }
 
 class GameOverlay extends StatefulWidget {
   final PixelDungeonGame game;
+  final VoidCallback onReturnToMenu;
 
-  const GameOverlay({super.key, required this.game});
+  const GameOverlay({
+    super.key,
+    required this.game,
+    required this.onReturnToMenu,
+  });
 
   @override
   State<GameOverlay> createState() => _GameOverlayState();
@@ -23,20 +28,29 @@ class _GameOverlayState extends State<GameOverlay> {
   @override
   void initState() {
     super.initState();
+    _setupCallbacks();
+  }
+
+  void _setupCallbacks() {
     widget.game.onShowTalentPicker = () {
       setState(() => _state = OverlayState.talentPicker);
     };
     widget.game.onShowWeaponPickup = () {
       setState(() => _state = OverlayState.weaponPickup);
     };
+
+    final originalOnStateChanged = widget.game.onStateChanged;
     widget.game.onStateChanged = () {
-      setState(() {
-        if (widget.game.gameState.isGameOver) {
-          _state = OverlayState.gameOver;
-        } else {
-          _state = OverlayState.playing;
-        }
-      });
+      originalOnStateChanged?.call();
+      if (mounted) {
+        setState(() {
+          if (widget.game.gameState.isGameOver) {
+            _state = OverlayState.gameOver;
+          } else {
+            _state = OverlayState.playing;
+          }
+        });
+      }
     };
   }
 
@@ -44,7 +58,7 @@ class _GameOverlayState extends State<GameOverlay> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // HUD - always visible
+        // HUD
         Positioned(
           top: 16,
           left: 16,
@@ -52,9 +66,15 @@ class _GameOverlayState extends State<GameOverlay> {
           child: HudWidget(game: widget.game),
         ),
 
+        // Pause button
+        Positioned(
+          top: 16,
+          right: 16,
+          child: _buildPauseButton(),
+        ),
+
         // Joysticks - only when playing
         if (_state == OverlayState.playing) ...[
-          // Move joystick
           Positioned(
             bottom: 40,
             left: 40,
@@ -70,7 +90,6 @@ class _GameOverlayState extends State<GameOverlay> {
               },
             ),
           ),
-          // Aim joystick
           Positioned(
             bottom: 40,
             right: 40,
@@ -89,27 +108,39 @@ class _GameOverlayState extends State<GameOverlay> {
             ),
           ),
           // Next room button
-          if (widget.game.isLoaded && widget.game.currentRoom.isCleared)
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: ElevatedButton.icon(
-                  onPressed: () => widget.game.moveToNextRoom(),
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Next Room'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          StreamBuilder<void>(
+            stream: Stream.periodic(const Duration(milliseconds: 300)),
+            builder: (context, _) {
+              if (widget.game.isLoaded &&
+                  widget.game.currentRoom.doorsOpen &&
+                  !widget.game.gameState.isGameOver) {
+                return Positioned(
+                  top: 80,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: ElevatedButton.icon(
+                      onPressed: () => widget.game.moveToNextRoom(),
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      label: const Text('Next Room'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ],
 
-        // Talent picker overlay
+        // Talent picker
         if (_state == OverlayState.talentPicker &&
             widget.game.pendingTalentChoices != null)
           TalentPicker(
@@ -127,7 +158,7 @@ class _GameOverlayState extends State<GameOverlay> {
             },
           ),
 
-        // Weapon pickup overlay
+        // Weapon pickup
         if (_state == OverlayState.weaponPickup &&
             widget.game.pendingWeapon != null)
           WeaponPickupDialog(
@@ -143,9 +174,60 @@ class _GameOverlayState extends State<GameOverlay> {
             },
           ),
 
-        // Game over overlay
+        // Game over
         if (_state == OverlayState.gameOver) _buildGameOverOverlay(),
       ],
+    );
+  }
+
+  Widget _buildPauseButton() {
+    return GestureDetector(
+      onTap: () => _showPauseMenu(),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black38,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(Icons.pause, color: Colors.white54, size: 20),
+      ),
+    );
+  }
+
+  void _showPauseMenu() {
+    widget.game.pauseEngine();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a2e),
+        title: const Text('Paused', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Floor ${widget.game.gameState.currentFloor} - ${widget.game.currentRoomLabel}',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.game.resumeEngine();
+            },
+            child: const Text('Resume'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.onReturnToMenu();
+            },
+            child: const Text('Quit', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -167,41 +249,60 @@ class _GameOverlayState extends State<GameOverlay> {
                 'GAME OVER',
                 style: TextStyle(
                   color: Colors.redAccent,
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Floor: ${widget.game.gameState.currentFloor}',
-                style: const TextStyle(color: Colors.white70, fontSize: 18),
-              ),
-              Text(
-                'Enemies Killed: ${widget.game.gameState.enemiesKilled}',
-                style: const TextStyle(color: Colors.white70, fontSize: 18),
-              ),
-              Text(
-                'Gold: ${widget.game.gameState.gold}',
-                style: const TextStyle(color: Colors.amber, fontSize: 18),
-              ),
+              _resultRow('Floor Reached', '${widget.game.gameState.currentFloor}'),
+              _resultRow('Rooms Cleared', '${widget.game.gameState.roomsCleared}'),
+              _resultRow('Enemies Killed', '${widget.game.gameState.enemiesKilled}'),
+              _resultRow('Gold Earned', '${widget.game.gameState.gold}'),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  widget.game.restartGame();
-                  setState(() => _state = OverlayState.playing);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                ),
-                child: const Text(
-                  'Try Again',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      widget.game.restartGame();
+                      setState(() => _state = OverlayState.playing);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    ),
+                    child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: widget.onReturnToMenu,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade800,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    ),
+                    child: const Text('Menu', style: TextStyle(color: Colors.white70)),
+                  ),
+                ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _resultRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+          ),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
