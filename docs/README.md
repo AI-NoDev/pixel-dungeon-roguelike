@@ -17,6 +17,10 @@
 | [09-monetization.md](./09-monetization.md) | 商业化方案 |
 | [10-release-checklist.md](./10-release-checklist.md) | 上架检查清单 |
 | [11-ai-art-prompts.md](./11-ai-art-prompts.md) | AI 美术生成 Prompts |
+| [12-naming.md](./12-naming.md) | 游戏命名（POP! Slime）|
+| [13-logo-design.md](./13-logo-design.md) | Logo 设计（应激史莱姆）|
+| [14-audio-design.md](./14-audio-design.md) | 完整音频设计（130+ 音效）|
+| [15-enemy-roster.md](./15-enemy-roster.md) | 敌人图鉴（5 家族 30 敌人）|
 
 ## 当前状态
 
