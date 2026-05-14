@@ -302,6 +302,7 @@ class PixelDungeonGame extends FlameGame
   /// Returns the nearest pickup within [maxRange] world units, or null.
   /// Used by the on-screen interaction button.
   InteractablePickup? nearestPickup({double maxRange = 60}) {
+    if (!isLoaded) return null;
     InteractablePickup? best;
     double bestDist = maxRange;
     for (final c in world.children) {

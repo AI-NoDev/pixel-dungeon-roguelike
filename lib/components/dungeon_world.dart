@@ -24,19 +24,20 @@ class DungeonWorld extends PositionComponent
   final List<RoomVisual> roomVisuals = [];
   final List<CorridorVisual> corridorVisuals = [];
 
-  /// Cached absolute wall rectangles (computed once after build).
+  /// Cached absolute wall rectangles. Populated on first access.
   final List<Rect> wallRects = [];
+  bool _wallsCollected = false;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     _buildRooms();
     _buildCorridors();
-    // Defer wall rect collection one tick so children mount and
-    // toAbsoluteRect returns valid values.
-    Future.microtask(_collectWallRects);
   }
 
+  /// Walk the world tree and collect every wall rect. Cheap (~50 entries).
+  /// Called lazily because room+corridor children mount during their own
+  /// onLoad which runs after our buildRooms / buildCorridors.
   void _collectWallRects() {
     wallRects.clear();
     void walk(Component c) {
@@ -48,10 +49,17 @@ class DungeonWorld extends PositionComponent
       }
     }
     walk(this);
+    _wallsCollected = true;
+  }
+
+  void _ensureWallsCollected() {
+    if (_wallsCollected && wallRects.isNotEmpty) return;
+    _collectWallRects();
   }
 
   /// True if [rect] overlaps any wall.
   bool overlapsWall(Rect rect) {
+    _ensureWallsCollected();
     for (final w in wallRects) {
       if (w.overlaps(rect)) return true;
     }

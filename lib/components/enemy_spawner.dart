@@ -45,6 +45,11 @@ class Enemy extends PositionComponent
   bool isDead = false;
   Vector2 moveDirection = Vector2.zero();
 
+  // Steering memory: when blocked, commit to a side direction for a short
+  // window so we don't oscillate.
+  Vector2? _steerLock;
+  double _steerLockTime = 0;
+
   late RectangleComponent body;
 
   @override
@@ -86,19 +91,32 @@ class Enemy extends PositionComponent
   }
 
   /// Returns a movement direction that probes for walls ahead. If a wall
-  /// blocks the desired direction, try the player-direction with a small
-  /// angular offset (left/right) until a clear path is found.
+  /// blocks the desired direction, try a small angular offset (left/right)
+  /// and lock in for ~0.5s to avoid oscillation.
   Vector2 _steeringDirection(Vector2 desired) {
+    // Use locked direction if still valid
+    if (_steerLock != null) {
+      _steerLockTime -= 0.016;
+      if (_steerLockTime > 0 && !_blocked(_steerLock!)) {
+        return _steerLock!;
+      }
+      _steerLock = null;
+    }
+
     if (!_blocked(desired)) return desired;
-    // Try fanning ±15°, ±30°, ±60°, ±90°
-    for (final off in const [0.26, -0.26, 0.52, -0.52, 1.04, -1.04, 1.57, -1.57]) {
+    // Small fan: try ±30°, ±60°, ±90°
+    for (final off in const [0.52, -0.52, 1.04, -1.04, 1.57, -1.57]) {
       final c = cos(off);
       final s = sin(off);
       final candidate = Vector2(
         desired.x * c - desired.y * s,
         desired.x * s + desired.y * c,
       );
-      if (!_blocked(candidate)) return candidate;
+      if (!_blocked(candidate)) {
+        _steerLock = candidate;
+        _steerLockTime = 0.5;
+        return candidate;
+      }
     }
     return desired;
   }

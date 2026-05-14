@@ -145,8 +145,20 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     final w = activeWeapon;
     try {
       final image = await game.images.load('weapons/weapon_${w.spriteId}.png');
+      // The source PNGs include a 1-pixel rarity border around the icon
+      // (used by the inventory UI). Crop it off so the in-hand weapon
+      // does not look like a square frame.
+      final src = Vector2(
+        (image.width - 2).toDouble(),
+        (image.height - 2).toDouble(),
+      );
+      final sprite = Sprite(
+        image,
+        srcPosition: Vector2(1, 1),
+        srcSize: src,
+      );
       _weaponSprite = SpriteComponent(
-        sprite: Sprite(image),
+        sprite: sprite,
         size: Vector2.all(20),
         anchor: Anchor.center,
         position: Vector2(16 + 12, 16),
