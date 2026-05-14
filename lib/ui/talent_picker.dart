@@ -49,43 +49,48 @@ class TalentPicker extends StatelessWidget {
   }
 
   Widget _buildTalentCard(TalentData talent) {
-    return GestureDetector(
-      onTap: () {
-        game.player.applyTalent(talent);
-        onPicked();
+    return Builder(
+      builder: (context) {
+        final t = AppLocalizations.of(context);
+        return GestureDetector(
+          onTap: () {
+            game.player.applyTalent(talent);
+            onPicked();
+          },
+          child: Container(
+            width: 140,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D2D44),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: talent.color, width: 2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(talent.icon, color: talent.color, size: 36),
+                const SizedBox(height: 8),
+                Text(
+                  t.t('talent_${talent.id}_name'),
+                  style: TextStyle(
+                    color: talent.color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  t.t('talent_${talent.id}_desc'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
       },
-      child: Container(
-        width: 140,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2D2D44),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: talent.color, width: 2),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(talent.icon, color: talent.color, size: 36),
-            const SizedBox(height: 8),
-            Text(
-              talent.name,
-              style: TextStyle(
-                color: talent.color,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              talent.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

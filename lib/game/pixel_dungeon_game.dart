@@ -316,6 +316,44 @@ class PixelDungeonGame extends FlameGame
   }
 
   /// Get current room info for HUD
+  String get currentRoomLabelKey {
+    final room = currentFloorRooms[currentRoomIndex];
+    switch (room.type) {
+      case RoomType.combat:
+        return 'room_combat';
+      case RoomType.elite:
+        return 'room_elite';
+      case RoomType.treasure:
+        return 'room_treasure';
+      case RoomType.shop:
+        return 'room_shop';
+      case RoomType.rest:
+        return 'room_rest';
+      case RoomType.boss:
+        return 'room_boss';
+    }
+  }
+
+  String get currentRoomIndexLabel {
+    return '${currentRoomIndex + 1}/${currentFloorRooms.length}';
+  }
+
+  String get currentThemeKey {
+    switch (currentFloorConfig.theme.type) {
+      case DungeonThemeType.crypt:
+        return 'theme_crypt';
+      case DungeonThemeType.cave:
+        return 'theme_cave';
+      case DungeonThemeType.fortress:
+        return 'theme_fortress';
+      case DungeonThemeType.inferno:
+        return 'theme_inferno';
+      case DungeonThemeType.void_:
+        return 'theme_void';
+    }
+  }
+
+  /// Get current room info for HUD (legacy, prefer key version)
   String get currentRoomLabel {
     final room = currentFloorRooms[currentRoomIndex];
     switch (room.type) {

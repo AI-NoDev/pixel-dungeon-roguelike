@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../i18n/app_localizations.dart';
 import 'minimap_widget.dart';
 
 class HudWidget extends StatelessWidget {
@@ -19,9 +20,9 @@ class HudWidget extends StatelessWidget {
               children: [
                 _buildHpBar(),
                 const SizedBox(width: 12),
-                _buildFloorInfo(),
+                _buildFloorInfo(context),
                 const SizedBox(width: 8),
-                _buildRoomInfo(),
+                _buildRoomInfo(context),
                 const Spacer(),
                 _buildGoldDisplay(),
               ],
@@ -96,10 +97,11 @@ class HudWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFloorInfo() {
+  Widget _buildFloorInfo(BuildContext context) {
     if (!game.isLoaded) {
       return const SizedBox.shrink();
     }
+    final t = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
@@ -118,7 +120,7 @@ class HudWidget extends StatelessWidget {
             ),
           ),
           Text(
-            game.currentThemeName,
+            t.t(game.currentThemeKey),
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.6),
               fontSize: 8,
@@ -129,10 +131,15 @@ class HudWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildRoomInfo() {
+  Widget _buildRoomInfo(BuildContext context) {
     if (!game.isLoaded) {
       return const SizedBox.shrink();
     }
+    final t = AppLocalizations.of(context);
+    final roomKey = game.currentRoomLabelKey;
+    final label = roomKey == 'room_combat'
+        ? '${t.t('room_combat')} ${game.currentRoomIndexLabel}'
+        : t.t(roomKey);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
@@ -140,7 +147,7 @@ class HudWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        game.currentRoomLabel,
+        label,
         style: const TextStyle(
           color: Colors.white70,
           fontSize: 11,
