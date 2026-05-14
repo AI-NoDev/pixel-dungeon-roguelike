@@ -53,6 +53,8 @@ class AppLocalizations {
       'background_music': 'Background Music',
       'sfx_volume': 'SFX Volume',
       'bgm_volume': 'BGM Volume',
+      'auto_aim': 'Auto Aim',
+      'auto_aim_range': 'Auto Aim Range',
       'close': 'Close',
 
       // Game UI
@@ -177,6 +179,8 @@ class AppLocalizations {
       'background_music': '背景音乐',
       'sfx_volume': '音效音量',
       'bgm_volume': '音乐音量',
+      'auto_aim': '自动瞄准',
+      'auto_aim_range': '自动瞄准范围',
       'close': '关闭',
 
       // Game UI

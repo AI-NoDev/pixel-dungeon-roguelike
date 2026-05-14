@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../data/weapons.dart';
 import '../data/talents.dart';
+import '../systems/preferences.dart';
 import 'bullet.dart';
 import 'enemy_spawner.dart';
 import 'floating_text.dart';
@@ -93,9 +94,20 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       position.y = position.y.clamp(40, 560);
     }
 
-    // Shooting
+    // Auto-aim: find nearest enemy if no manual aim
+    final usingAutoAim = GamePreferences.autoAim && !isShooting;
+    Enemy? autoTarget;
+    if (usingAutoAim) {
+      autoTarget = _findNearestEnemy(GamePreferences.autoAimRange);
+      if (autoTarget != null) {
+        aimDirection = (autoTarget.position - position).normalized();
+      }
+    }
+
+    // Shooting (manual or auto)
+    final shouldShoot = isShooting || (usingAutoAim && autoTarget != null);
     _shootTimer += dt;
-    if (isShooting && _shootTimer >= attackInterval) {
+    if (shouldShoot && _shootTimer >= attackInterval) {
       _shoot();
       _shootTimer = 0;
     }
@@ -109,6 +121,21 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
         16 + sin(angle) * 12 - 2,
       );
     }
+  }
+
+  Enemy? _findNearestEnemy(double maxRange) {
+    Enemy? nearest;
+    double nearestDist = maxRange;
+    for (final c in game.world.children) {
+      if (c is Enemy && !c.isDead) {
+        final d = c.position.distanceTo(position);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = c;
+        }
+      }
+    }
+    return nearest;
   }
 
   void _shoot() {

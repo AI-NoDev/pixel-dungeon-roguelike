@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../data/weapons.dart';
 import '../components/enemy_spawner.dart';
+import '../components/element_status_indicator.dart';
 import '../game/pixel_dungeon_game.dart';
 import 'particle_system.dart';
 
@@ -102,20 +103,22 @@ class ElementSystem {
     ElementType element,
     double damage,
   ) {
+    // Show status indicator above enemy
+    if (element != ElementType.none) {
+      _spawnStatusIndicator(game, enemy, element, _getElementDuration(element));
+    }
+
     switch (element) {
       case ElementType.fire:
-        // Burn: small DoT
         _applyBurn(game, enemy, damage * 0.3);
         break;
       case ElementType.ice:
-        // Slow
         enemy.speed *= 0.6;
         Future.delayed(const Duration(seconds: 3), () {
           if (!enemy.isDead) enemy.speed /= 0.6;
         });
         break;
       case ElementType.lightning:
-        // Brief stun (stop movement)
         final originalSpeed = enemy.speed;
         enemy.speed = 0;
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -123,12 +126,42 @@ class ElementSystem {
         });
         break;
       case ElementType.poison:
-        // Poison DoT
         _applyPoison(game, enemy, damage * 0.2);
         break;
       case ElementType.none:
         break;
     }
+  }
+
+  static double _getElementDuration(ElementType element) {
+    switch (element) {
+      case ElementType.fire:
+        return 2.0;
+      case ElementType.ice:
+        return 3.0;
+      case ElementType.lightning:
+        return 0.5;
+      case ElementType.poison:
+        return 4.0;
+      case ElementType.none:
+        return 0;
+    }
+  }
+
+  static void _spawnStatusIndicator(
+    PixelDungeonGame game,
+    Enemy enemy,
+    ElementType element,
+    double duration,
+  ) {
+    final indicator = ElementStatusIndicator(
+      element: element,
+      duration: duration,
+      position: enemy.position + Vector2(0, -16),
+    );
+    game.world.add(indicator);
+    // Make indicator follow enemy
+    indicator.add(_FollowComponent(target: enemy));
   }
 
   static void _applyBurn(PixelDungeonGame game, Enemy enemy, double dps) {
@@ -248,4 +281,24 @@ enum ReactionType {
   toxic,      // Poison + Fire: DoT AoE cloud
   corrode,    // Poison + Ice: Defense down
   chain,      // Lightning + Poison: Chain to nearby
+}
+
+
+/// Helper component that makes its parent follow a target position.
+class _FollowComponent extends Component {
+  _FollowComponent({required this.target});
+
+  final PositionComponent target;
+  static const double offsetY = -16;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (parent is PositionComponent && !target.isRemoved) {
+      (parent as PositionComponent).position = Vector2(
+        target.position.x,
+        target.position.y + offsetY,
+      );
+    }
+  }
 }

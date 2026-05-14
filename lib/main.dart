@@ -10,6 +10,7 @@ import 'ui/save_slot_screen.dart';
 import 'data/heroes.dart';
 import 'systems/audio_system.dart';
 import 'systems/save_slot_system.dart';
+import 'systems/preferences.dart';
 import 'i18n/app_localizations.dart';
 
 void main() async {
@@ -20,6 +21,7 @@ void main() async {
   ]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
   await AudioSystem.init();
+  await GamePreferences.load();
 
   runApp(const PixelDungeonApp());
 }

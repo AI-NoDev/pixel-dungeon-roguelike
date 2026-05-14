@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../systems/audio_system.dart';
+import '../systems/preferences.dart';
 import '../i18n/app_localizations.dart';
 
 class SettingsWidget extends StatefulWidget {
@@ -76,6 +77,28 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 AudioSystem.bgmVolume,
                 (val) {
                   setState(() => AudioSystem.bgmVolume = val);
+                },
+              ),
+              const SizedBox(height: 12),
+              // Auto-aim toggle
+              _buildToggle(
+                t.t('auto_aim'),
+                GamePreferences.autoAim,
+                Icons.gps_fixed,
+                (val) {
+                  setState(() {
+                    GamePreferences.setAutoAim(val);
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildSlider(
+                t.t('auto_aim_range'),
+                GamePreferences.autoAimRange / 400.0, // normalize to 0-1
+                (val) {
+                  setState(() {
+                    GamePreferences.setAutoAimRange(val * 400.0);
+                  });
                 },
               ),
               const SizedBox(height: 20),

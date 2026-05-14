@@ -150,12 +150,24 @@ abstract class SlimeBase extends Enemy {
   @override
   void takeDamage(double damage) {
     if (isDead) return;
-    super.takeDamage(damage);
-    if (!isDead) {
+    hp -= damage;
+
+    // Show floating damage number (don't call super, body has been replaced)
+    game.world.add(FloatingText.damage(
+      position + Vector2(0, -8),
+      damage,
+    ));
+
+    // Trigger hurt animation state
+    if (hp > 0) {
       _setState(SlimeAnimState.hurt);
       Future.delayed(const Duration(milliseconds: 200), () {
         if (!isDead) _setState(_isMoving ? SlimeAnimState.jump : SlimeAnimState.idle);
       });
+    } else {
+      hp = 0;
+      isDead = true;
+      onDeath();
     }
   }
   /// Override for slime-specific death effects
