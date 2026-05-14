@@ -3,40 +3,44 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../components/enemy_spawner.dart';
 import '../components/enemies/spawn_marker.dart';
-import '../components/dungeon_room.dart';
+import '../data/dungeon_map.dart';
 import '../game/pixel_dungeon_game.dart';
 
-/// Manages enemy waves within a single room.
-/// Each room has 2-3 waves; the next wave only spawns when previous is cleared.
+/// Per-room wave manager. Tracks how many waves have spawned and when the
+/// room is fully cleared.
 class WaveSystem {
   WaveSystem({required this.game, required this.room});
 
   final PixelDungeonGame game;
-  final DungeonRoom room;
+  final RoomNode room;
 
   int currentWave = 0;
   int totalWaves = 2;
   bool _waveActive = false;
+  final List<Enemy> _liveEnemies = [];
   final Random _random = Random();
 
-  /// Initialize for a new room based on room type.
   void start({required int waveCount, required EnemySpawner spawner}) {
     currentWave = 0;
     totalWaves = waveCount;
     _waveActive = false;
+    _liveEnemies.clear();
     _spawnNextWave(spawner);
   }
 
-  /// Check if all enemies dead -> spawn next wave OR mark room done.
   void update(EnemySpawner spawner) {
     if (!_waveActive) return;
-    if (room.enemies.every((e) => e.isDead || e.isRemoved)) {
+    // Remove dead/removed enemies from tracking
+    _liveEnemies.removeWhere((e) => e.isDead || e.isRemoved);
+    if (_liveEnemies.isEmpty) {
       _waveActive = false;
       if (currentWave < totalWaves) {
-        // Brief delay between waves
         Future.delayed(const Duration(milliseconds: 800), () {
           _spawnNextWave(spawner);
         });
+      } else {
+        // All waves cleared — notify game
+        game.onRoomCleared(room);
       }
     }
   }
@@ -46,9 +50,7 @@ class WaveSystem {
   void _spawnNextWave(EnemySpawner spawner) {
     currentWave++;
     _waveActive = true;
-    room.enemies.clear();
 
-    // Wave size increases with wave number
     final config = game.currentFloorConfig;
     final waveSize = (config.baseEnemyCount * (0.6 + 0.3 * currentWave)).ceil();
 
@@ -57,7 +59,6 @@ class WaveSystem {
       final spawnType = _pickSpawnAnim();
       final markerColor = _markerColorForWave(currentWave);
 
-      // Drop a marker first; enemy emerges after marker animation
       final marker = SpawnMarker(
         position: pos,
         color: markerColor,
@@ -74,10 +75,14 @@ class WaveSystem {
   Vector2 _randomSpawnPosition() {
     double x, y;
     final playerPos = game.player.position;
+    int tries = 0;
     do {
-      x = 60 + _random.nextDouble() * 680;
-      y = 60 + _random.nextDouble() * 480;
-    } while ((Vector2(x, y) - playerPos).length < 140);
+      x = room.worldPosition.x + 60 +
+          _random.nextDouble() * (room.size.x - 120);
+      y = room.worldPosition.y + 60 +
+          _random.nextDouble() * (room.size.y - 120);
+      tries++;
+    } while ((Vector2(x, y) - playerPos).length < 140 && tries < 10);
     return Vector2(x, y);
   }
 
@@ -90,13 +95,12 @@ class WaveSystem {
   }
 
   Color _markerColorForWave(int wave) {
-    if (wave == 1) return const Color(0xFFFF7043); // orange
-    if (wave == 2) return const Color(0xFFFF1744); // red
-    return const Color(0xFFAB47BC); // purple for late waves
+    if (wave == 1) return const Color(0xFFFF7043);
+    if (wave == 2) return const Color(0xFFFF1744);
+    return const Color(0xFFAB47BC);
   }
 
   void _spawnEnemyWithAnim(EnemySpawner spawner, Vector2 pos, SpawnAnimType type) {
-    // Play spawn animation visual
     final config = game.currentFloorConfig;
     final enemy = spawner.createEnemyForWave(pos, config);
     game.world.add(SpawnAnimation(
@@ -105,8 +109,7 @@ class WaveSystem {
       type: type,
       duration: 0.5,
     ));
-    // Add the actual enemy
     game.world.add(enemy);
-    room.enemies.add(enemy);
+    _liveEnemies.add(enemy);
   }
 }

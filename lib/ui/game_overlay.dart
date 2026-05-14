@@ -125,38 +125,6 @@ class _GameOverlayState extends State<GameOverlay> {
             ),
           ),
 
-          // Next room button (when room cleared)
-          StreamBuilder<void>(
-            stream: Stream.periodic(const Duration(milliseconds: 300)),
-            builder: (context, _) {
-              if (widget.game.isLoaded &&
-                  widget.game.currentRoom.doorsOpen &&
-                  !widget.game.gameState.isGameOver) {
-                return Positioned(
-                  top: 80,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () => widget.game.moveToNextRoom(),
-                      icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: Text(AppLocalizations.of(context).t('next_room')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
           // Talent picker overlay
           if (_showTalentPicker && widget.game.pendingTalentChoices != null)
             TalentPicker(

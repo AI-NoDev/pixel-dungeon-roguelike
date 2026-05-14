@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
-import '../i18n/app_localizations.dart';
-import 'minimap_widget.dart';
 
+/// Minimal HUD: HP bar (top-left) + gold (top-right corner).
+/// No minimap, no room progress, no theme name — keeps the screen clean
+/// so the dungeon explores via vision alone.
 class HudWidget extends StatelessWidget {
   final PixelDungeonGame game;
 
@@ -13,32 +14,11 @@ class HudWidget extends StatelessWidget {
     return StreamBuilder<void>(
       stream: Stream.periodic(const Duration(milliseconds: 100)),
       builder: (context, _) {
-        return Column(
+        return Row(
           children: [
-            // Top row: HP, Floor, Room, Gold
-            Row(
-              children: [
-                _buildHpBar(),
-                const SizedBox(width: 12),
-                _buildFloorInfo(context),
-                const SizedBox(width: 8),
-                _buildRoomInfo(context),
-                const Spacer(),
-                _buildGoldDisplay(),
-              ],
-            ),
-            // Minimap (room progress)
-            if (game.isLoaded)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: MinimapWidget(game: game),
-              ),
-            // Boss HP bar (if in boss room)
-            if (game.isLoaded && game.currentBoss != null && !(game.currentBoss!.isDead))
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _buildBossHpBar(),
-              ),
+            _buildHpBar(),
+            const Spacer(),
+            _buildGoldDisplay(),
           ],
         );
       },
@@ -64,11 +44,11 @@ class HudWidget extends StatelessWidget {
             : Colors.red;
 
     return Container(
-      width: 140,
-      height: 18,
+      width: 160,
+      height: 22,
       decoration: BoxDecoration(
         color: Colors.black54,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(11),
         border: Border.all(color: Colors.white24),
       ),
       child: Stack(
@@ -78,7 +58,7 @@ class HudWidget extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: hpColor,
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(11),
               ),
             ),
           ),
@@ -87,7 +67,7 @@ class HudWidget extends StatelessWidget {
               '${game.player.hp.toInt()}/${game.player.maxHp.toInt()}',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -97,69 +77,9 @@ class HudWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFloorInfo(BuildContext context) {
-    if (!game.isLoaded) {
-      return const SizedBox.shrink();
-    }
-    final t = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'F${game.gameState.currentFloor}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            t.t(game.currentThemeKey),
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoomInfo(BuildContext context) {
-    if (!game.isLoaded) {
-      return const SizedBox.shrink();
-    }
-    final t = AppLocalizations.of(context);
-    final roomKey = game.currentRoomLabelKey;
-    final label = roomKey == 'room_combat'
-        ? '${t.t('room_combat')} ${game.currentRoomIndexLabel}'
-        : t.t(roomKey);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _buildGoldDisplay() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.black54,
         borderRadius: BorderRadius.circular(8),
@@ -173,52 +93,12 @@ class HudWidget extends StatelessWidget {
             '${game.gameState.gold}',
             style: const TextStyle(
               color: Colors.amber,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBossHpBar() {
-    final boss = game.currentBoss!;
-    final hpPercent = boss.hp / boss.maxHp;
-
-    return Column(
-      children: [
-        Text(
-          boss.data.name,
-          style: const TextStyle(
-            color: Colors.redAccent,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: 250,
-          height: 12,
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.red.shade800),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: hpPercent.clamp(0, 1),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.red.shade900, Colors.red.shade400],
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

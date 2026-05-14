@@ -3,11 +3,14 @@ import 'package:flame/game.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import '../components/player.dart';
-import '../components/dungeon_room.dart';
+import '../components/dungeon_world.dart';
 import '../components/enemy_spawner.dart';
 import '../components/boss.dart';
 import '../components/bullet.dart';
 import '../components/decal.dart';
+import '../components/fog_of_war.dart';
+import '../components/talent_pickup.dart';
+import '../components/floating_text.dart';
 import '../systems/input_system.dart';
 import '../systems/combat_system.dart';
 import '../systems/skill_system.dart';
@@ -16,77 +19,83 @@ import '../data/weapons.dart';
 import '../data/talents.dart';
 import '../data/floor_config.dart';
 import '../data/dungeon_theme.dart';
+import '../data/dungeon_map.dart';
 import '../data/boss_data.dart';
 import '../data/heroes.dart';
 
 class PixelDungeonGame extends FlameGame
     with HasCollisionDetection, HasKeyboardHandlerComponents {
   late Player player;
-  late DungeonRoom currentRoom;
+  late DungeonWorld dungeonWorld;
   late EnemySpawner enemySpawner;
   late CombatSystem combatSystem;
+  late FogOfWar fogOfWar;
 
   final GameState gameState = GameState();
   final InputSystem inputSystem = InputSystem();
   late final SkillSystem skillSystem = SkillSystem(game: this);
 
-  // Floor/Room tracking
+  // Floor + map state
   late FloorConfig currentFloorConfig;
-  late List<RoomConfig> currentFloorRooms;
-  int currentRoomIndex = 0;
+  late DungeonMap dungeonMap;
+  RoomNode? currentRoom;
 
-  // Hero selection
-  HeroData selectedHero = HeroData.knight;
-
-  // UI state callbacks
+  // UI callbacks
   VoidCallback? onShowTalentPicker;
   VoidCallback? onShowWeaponPickup;
+  VoidCallback? onShowShop;
   VoidCallback? onStateChanged;
   VoidCallback? onBossDefeated;
   VoidCallback? onFloorComplete;
 
-  // Pending rewards
   List<TalentData>? pendingTalentChoices;
   WeaponData? pendingWeapon;
 
-  // Boss tracking
+  HeroData selectedHero = HeroData.knight;
   BossEnemy? currentBoss;
 
   @override
-  Color backgroundColor() => const Color(0xFF1a1a2e);
+  Color backgroundColor() => const Color(0xFF0D0D1A);
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-
     camera.viewfinder.anchor = Anchor.center;
 
-    // Initialize floor
+    _initFloor();
+  }
+
+  void _initFloor() {
     currentFloorConfig = FloorConfig.getConfig(gameState.currentFloor);
-    currentFloorRooms = RoomConfig.generateFloorRooms(currentFloorConfig);
-    currentRoomIndex = 0;
+    dungeonMap = DungeonMap.generate(currentFloorConfig);
 
-    // Create room
-    currentRoom = DungeonRoom(roomSize: Vector2(800, 600));
-    currentRoom.setConfig(
-      currentFloorRooms[currentRoomIndex].type,
-      currentFloorConfig.theme,
+    // Build dungeon world
+    dungeonWorld = DungeonWorld(
+      map: dungeonMap,
+      theme: currentFloorConfig.theme,
     );
-    world.add(currentRoom);
+    world.add(dungeonWorld);
 
-    // Create player
-    player = Player(position: Vector2(400, 300));
+    // Spawn player at start room center
+    final startRoom = dungeonMap.getRoom(dungeonMap.startRoomId);
+    player = Player(position: startRoom.center);
     _applyHeroStats();
     world.add(player);
 
-    // Spawn enemies for first room
-    enemySpawner = EnemySpawner(game: this);
-    _spawnForCurrentRoom();
+    // Fog of war on top of world (but below UI)
+    fogOfWar = FogOfWar(map: dungeonMap);
+    world.add(fogOfWar);
 
-    // Setup combat
+    enemySpawner = EnemySpawner(game: this);
     combatSystem = CombatSystem(game: this);
 
+    // Camera follows player
     camera.follow(player);
+    camera.viewfinder.zoom = 1.2;
+
+    // Mark start room as visited
+    currentRoom = startRoom;
+    startRoom.visited = true;
   }
 
   void _applyHeroStats() {
@@ -97,63 +106,6 @@ class PixelDungeonGame extends FlameGame
     player.baseFireRate = selectedHero.fireRate;
   }
 
-  void _spawnForCurrentRoom() {
-    final roomConfig = currentFloorRooms[currentRoomIndex];
-
-    switch (roomConfig.type) {
-      case RoomType.combat:
-        enemySpawner.spawnEnemiesForRoom(currentRoom);
-        break;
-      case RoomType.elite:
-        enemySpawner.spawnEliteRoom(currentRoom);
-        break;
-      case RoomType.boss:
-        _spawnBoss();
-        break;
-      case RoomType.treasure:
-      case RoomType.shop:
-      case RoomType.rest:
-        // No enemies in these rooms
-        // Handle special room effects
-        _handleSpecialRoom(roomConfig.type);
-        break;
-    }
-  }
-
-  void _spawnBoss() {
-    final bossData = BossData.getBossForFloor(gameState.currentFloor);
-    currentBoss = BossEnemy(
-      position: Vector2(400, 200),
-      data: bossData,
-    );
-    world.add(currentBoss!);
-    currentRoom.enemies.clear(); // Boss room uses boss tracking instead
-  }
-
-  // Shop state
-  VoidCallback? onShowShop;
-
-  void _handleSpecialRoom(RoomType type) {
-    switch (type) {
-      case RoomType.rest:
-        // Heal 30% of max HP
-        player.heal(player.maxHp * 0.3);
-        break;
-      case RoomType.treasure:
-        // Give a random weapon
-        pendingWeapon = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
-        onShowWeaponPickup?.call();
-        pauseEngine();
-        break;
-      case RoomType.shop:
-        onShowShop?.call();
-        pauseEngine();
-        break;
-      default:
-        break;
-    }
-  }
-
   @override
   void update(double dt) {
     super.update(dt);
@@ -161,57 +113,87 @@ class PixelDungeonGame extends FlameGame
     skillSystem.update(dt);
     enemySpawner.update(dt);
 
-    // Check room clear conditions
-    if (_isCurrentRoomCleared() && !currentRoom.doorsOpen) {
-      currentRoom.openDoors();
-      gameState.roomsCleared++;
-      _onRoomCleared();
+    // Detect room transitions for fog of war + spawn triggers
+    final newRoom = dungeonWorld.roomAt(player.position);
+    if (newRoom != null && newRoom.id != currentRoom?.id) {
+      _onPlayerEnterRoom(newRoom);
     }
   }
 
-  bool _isCurrentRoomCleared() {
-    final roomType = currentFloorRooms[currentRoomIndex].type;
-
-    if (roomType == RoomType.boss) {
-      return currentBoss?.isDead ?? false;
+  void _onPlayerEnterRoom(RoomNode room) {
+    currentRoom = room;
+    if (!room.visited) {
+      room.visited = true;
+      _triggerRoomEncounter(room);
     }
-
-    // For combat/elite rooms, all waves must be cleared
-    if (roomType == RoomType.combat || roomType == RoomType.elite) {
-      return enemySpawner.allWavesDone &&
-             currentRoom.enemies.every((e) => e.isDead || e.isRemoved);
-    }
-
-    return currentRoom.isCleared;
   }
 
-  void _onRoomCleared() {
-    final roomType = currentFloorRooms[currentRoomIndex].type;
+  void _triggerRoomEncounter(RoomNode room) {
+    switch (room.type) {
+      case RoomType.combat:
+      case RoomType.elite:
+        // Trigger waves of enemies
+        final wave = room.type == RoomType.elite ? 3 : 2;
+        enemySpawner.spawnWavesInRoom(room, waveCount: wave);
+        break;
+      case RoomType.boss:
+        _spawnBoss(room);
+        break;
+      case RoomType.treasure:
+        _spawnTreasure(room);
+        break;
+      case RoomType.rest:
+        player.heal(player.maxHp * 0.3);
+        break;
+      case RoomType.shop:
+        onShowShop?.call();
+        pauseEngine();
+        break;
+    }
+  }
 
-    if (roomType == RoomType.boss) {
-      // Boss defeated!
+  /// Called by enemy_spawner when a room's last wave is cleared.
+  void onRoomCleared(RoomNode room) {
+    if (room.cleared) return;
+    room.cleared = true;
+    gameState.roomsCleared++;
+    onStateChanged?.call();
+
+    // Drop a talent pickup as reward for combat/elite rooms
+    if (room.type == RoomType.combat || room.type == RoomType.elite) {
+      final talents = TalentPool.getRandomChoices();
+      world.add(TalentPickup(
+        position: room.center,
+        choices: talents,
+      ));
+    }
+
+    // Boss room → next floor
+    if (room.type == RoomType.boss) {
       gameState.gold += 100;
       onBossDefeated?.call();
-    }
-
-    // Offer talent for combat/elite/boss rooms
-    if (roomType == RoomType.combat ||
-        roomType == RoomType.elite ||
-        roomType == RoomType.boss) {
-      pendingTalentChoices = TalentPool.getRandomChoices();
-      onShowTalentPicker?.call();
-      pauseEngine();
-    }
-
-    // Weapon drop every 2 combat rooms
-    if (gameState.roomsCleared % 2 == 0 && roomType != RoomType.boss) {
-      pendingWeapon = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        moveToNextFloor();
+      });
     }
   }
+
+  void _spawnBoss(RoomNode room) {
+    final bossData = BossData.getBossForFloor(gameState.currentFloor);
+    currentBoss = BossEnemy(position: room.center + Vector2(0, -100), data: bossData);
+    world.add(currentBoss!);
+  }
+
+  void _spawnTreasure(RoomNode room) {
+    pendingWeapon = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
+    onShowWeaponPickup?.call();
+    pauseEngine();
+  }
+
+  // ---- Talent picker callbacks ----
 
   void onTalentPicked() {
     pendingTalentChoices = null;
-
     if (pendingWeapon != null) {
       onShowWeaponPickup?.call();
     } else {
@@ -235,63 +217,24 @@ class PixelDungeonGame extends FlameGame
     onStateChanged?.call();
   }
 
-  void moveToNextRoom() {
-    currentRoomIndex++;
-
-    // Check if floor is complete
-    if (currentRoomIndex >= currentFloorRooms.length) {
-      _moveToNextFloor();
-      return;
-    }
-
-    // Clean up current room
-    _cleanupRoom();
-
-    // Setup new room
-    currentRoom.setConfig(
-      currentFloorRooms[currentRoomIndex].type,
-      currentFloorConfig.theme,
-    );
-    currentRoom.regenerate();
-    player.position = Vector2(400, 500); // Enter from bottom
-
-    // Spawn enemies
-    _spawnForCurrentRoom();
-    onStateChanged?.call();
-  }
-
-  void _moveToNextFloor() {
+  void moveToNextFloor() {
     gameState.currentFloor++;
-    currentRoomIndex = 0;
-
-    // Generate new floor
-    currentFloorConfig = FloorConfig.getConfig(gameState.currentFloor);
-    currentFloorRooms = RoomConfig.generateFloorRooms(currentFloorConfig);
-
-    // Clean and rebuild
-    _cleanupRoom();
-    currentRoom.setConfig(
-      currentFloorRooms[0].type,
-      currentFloorConfig.theme,
-    );
-    currentRoom.regenerate();
-    player.position = Vector2(400, 500);
-
-    _spawnForCurrentRoom();
+    _cleanupAll();
+    _initFloor();
     onFloorComplete?.call();
     onStateChanged?.call();
   }
 
-  void _cleanupRoom() {
-    // Remove all enemies
+  void _cleanupAll() {
     world.children.whereType<Enemy>().forEach((e) => e.removeFromParent());
-    // Remove boss if exists
+    world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
+    world.children.whereType<Decal>().forEach((d) => d.removeFromParent());
+    world.children.whereType<TalentPickup>().forEach((t) => t.removeFromParent());
     currentBoss?.removeFromParent();
     currentBoss = null;
-    // Remove bullets
-    world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
-    // Remove decals (corpses, slime puddles, bullet holes)
-    world.children.whereType<Decal>().forEach((d) => d.removeFromParent());
+    dungeonWorld.removeFromParent();
+    fogOfWar.removeFromParent();
+    player.removeFromParent();
   }
 
   void onPlayerDeath() {
@@ -302,79 +245,34 @@ class PixelDungeonGame extends FlameGame
 
   void restartGame() {
     gameState.reset();
-    currentRoomIndex = 0;
-    currentFloorConfig = FloorConfig.getConfig(1);
-    currentFloorRooms = RoomConfig.generateFloorRooms(currentFloorConfig);
-
-    _cleanupRoom();
-    currentRoom.setConfig(RoomType.combat, DungeonTheme.crypt);
-    currentRoom.regenerate();
-
-    player.reset();
-    _applyHeroStats();
-    player.position = Vector2(400, 300);
-
-    _spawnForCurrentRoom();
+    _cleanupAll();
+    _initFloor();
     resumeEngine();
     onStateChanged?.call();
   }
 
-  /// Get current room info for HUD
+  // Backward-compat for HUD widgets / old code:
   String get currentRoomLabelKey {
-    final room = currentFloorRooms[currentRoomIndex];
-    switch (room.type) {
-      case RoomType.combat:
-        return 'room_combat';
-      case RoomType.elite:
-        return 'room_elite';
-      case RoomType.treasure:
-        return 'room_treasure';
-      case RoomType.shop:
-        return 'room_shop';
-      case RoomType.rest:
-        return 'room_rest';
-      case RoomType.boss:
-        return 'room_boss';
+    if (currentRoom == null) return 'room_combat';
+    switch (currentRoom!.type) {
+      case RoomType.combat: return 'room_combat';
+      case RoomType.elite: return 'room_elite';
+      case RoomType.treasure: return 'room_treasure';
+      case RoomType.shop: return 'room_shop';
+      case RoomType.rest: return 'room_rest';
+      case RoomType.boss: return 'room_boss';
     }
   }
 
-  String get currentRoomIndexLabel {
-    return '${currentRoomIndex + 1}/${currentFloorRooms.length}';
-  }
+  String get currentRoomIndexLabel => '';
 
   String get currentThemeKey {
     switch (currentFloorConfig.theme.type) {
-      case DungeonThemeType.crypt:
-        return 'theme_crypt';
-      case DungeonThemeType.cave:
-        return 'theme_cave';
-      case DungeonThemeType.fortress:
-        return 'theme_fortress';
-      case DungeonThemeType.inferno:
-        return 'theme_inferno';
-      case DungeonThemeType.void_:
-        return 'theme_void';
+      case DungeonThemeType.crypt: return 'theme_crypt';
+      case DungeonThemeType.cave: return 'theme_cave';
+      case DungeonThemeType.fortress: return 'theme_fortress';
+      case DungeonThemeType.inferno: return 'theme_inferno';
+      case DungeonThemeType.void_: return 'theme_void';
     }
   }
-
-  /// Get current room info for HUD (legacy, prefer key version)
-  String get currentRoomLabel {
-    final room = currentFloorRooms[currentRoomIndex];
-    switch (room.type) {
-      case RoomType.combat:
-        return 'Room ${currentRoomIndex + 1}/${currentFloorRooms.length}';
-      case RoomType.elite:
-        return 'Elite Room';
-      case RoomType.treasure:
-        return 'Treasure Room';
-      case RoomType.shop:
-        return 'Shop';
-      case RoomType.rest:
-        return 'Rest Area';
-      case RoomType.boss:
-        return 'BOSS';
-    }
-  }
-
-  String get currentThemeName => currentFloorConfig.theme.name;
 }

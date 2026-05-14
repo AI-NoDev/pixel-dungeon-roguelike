@@ -12,5 +12,6 @@ class CombatSystem {
     game.player.moveDirection = input.moveDirection;
     game.player.aimDirection = input.aimDirection;
     game.player.isShooting = input.isShooting;
+    game.player.isManualAim = input.isManualAim;
   }
 }

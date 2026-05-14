@@ -4,6 +4,7 @@ import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../data/weapons.dart';
+import 'dungeon_world.dart';
 import 'player.dart';
 
 class Bullet extends PositionComponent
@@ -120,6 +121,12 @@ class Bullet extends PositionComponent
   @override
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
+
+    // Bullet hits wall — leave decal and destroy
+    if (other is WallSegment) {
+      removeFromParent();
+      return;
+    }
 
     if (!isPlayerBullet && other is Player) {
       other.takeDamage(damage);

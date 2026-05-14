@@ -52,7 +52,8 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   Vector2 moveDirection = Vector2.zero();
   Vector2 aimDirection = Vector2(1, 0);
   double _shootTimer = 0;
-  bool isShooting = false;
+  bool isShooting = false;        // finger on aim joystick (auto-aim or manual)
+  bool isManualAim = false;       // dragged outside deadzone
   bool isDead = false;
 
   // Talents collected
@@ -96,23 +97,16 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       position.y = position.y.clamp(40, 560);
     }
 
-    // Auto-aim: only adjusts aim direction, does NOT auto-fire
-    // Player still needs to hold the right stick to shoot
-    if (GamePreferences.autoAim) {
+    // Auto-aim while finger is on aim joystick but not dragged out
+    // (deadzone center = auto-aim, drag = manual aim)
+    if (isShooting && !isManualAim) {
       final autoTarget = _findNearestEnemy(GamePreferences.autoAimRange);
       if (autoTarget != null) {
-        final autoDir = (autoTarget.position - position).normalized();
-        // If player isn't manually aiming, snap to enemy
-        if (!isShooting) {
-          aimDirection = autoDir;
-        } else {
-          // Soft assist: blend manual aim toward target
-          aimDirection = (aimDirection + autoDir * 0.3).normalized();
-        }
+        aimDirection = (autoTarget.position - position).normalized();
       }
     }
 
-    // Shooting only when player explicitly fires
+    // Shooting: finger is on aim joystick (any mode triggers fire)
     _shootTimer += dt;
     if (isShooting && _shootTimer >= attackInterval) {
       _shoot();

@@ -13,6 +13,7 @@ import 'decal.dart';
 import 'dungeon_room.dart';
 import 'enemies/slime_species.dart';
 import 'floating_text.dart';
+import '../data/dungeon_map.dart' show RoomNode;
 import '../systems/wave_system.dart';
 
 /// Base enemy class
@@ -280,27 +281,30 @@ class EnemySpawner {
 
   EnemySpawner({required this.game});
 
-  /// Wave system tied to current room
-  WaveSystem? _waveSystem;
-  WaveSystem? get currentWaveSystem => _waveSystem;
+  /// Wave systems by room id (multi-room dungeon).
+  final Map<int, WaveSystem> _activeWaves = {};
 
-  void spawnEnemiesForRoom(DungeonRoom room) {
-    _waveSystem = WaveSystem(game: game, room: room);
-    _waveSystem!.start(waveCount: 2, spawner: this);
+  /// Spawn waves of enemies in a specific room.
+  void spawnWavesInRoom(RoomNode room, {int waveCount = 2}) {
+    final wave = WaveSystem(game: game, room: room);
+    _activeWaves[room.id] = wave;
+    wave.start(waveCount: waveCount, spawner: this);
   }
 
-  void spawnEliteRoom(DungeonRoom room) {
-    _waveSystem = WaveSystem(game: game, room: room);
-    _waveSystem!.start(waveCount: 3, spawner: this);
-  }
-
-  /// Called every frame to advance wave logic.
+  /// Called every frame to advance wave logic for all rooms.
   void update(double dt) {
-    _waveSystem?.update(this);
+    _activeWaves.removeWhere((id, wave) {
+      wave.update(this);
+      return wave.allWavesCleared;
+    });
   }
 
-  /// True when all waves cleared.
-  bool get allWavesDone => _waveSystem?.allWavesCleared ?? true;
+  /// Whether the room with given id has finished all waves.
+  bool isRoomCleared(int roomId) {
+    final wave = _activeWaves[roomId];
+    if (wave == null) return true;
+    return wave.allWavesCleared;
+  }
 
   Vector2 _randomPositionInRoom() {
     double x, y;
