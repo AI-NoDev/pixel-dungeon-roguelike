@@ -92,9 +92,9 @@ abstract class SlimeBase extends Enemy {
   void onSlimeDeath() {}
 
   @override
-  void _onDeath() {
+  void onDeath() {
     onSlimeDeath();
-    super._onDeath();
+    super.onDeath();
   }
 
   static Color _lighten(Color c, double amount) {
