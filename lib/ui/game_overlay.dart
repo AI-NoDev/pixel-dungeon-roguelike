@@ -6,6 +6,7 @@ import 'hud_widget.dart';
 import 'talent_picker.dart';
 import 'weapon_pickup.dart';
 import 'shop_widget.dart';
+import 'skill_button.dart';
 
 enum OverlayState { playing, talentPicker, weaponPickup, shop, gameOver }
 
@@ -109,6 +110,15 @@ class _GameOverlayState extends State<GameOverlay> {
               onDirectionEnd: () {
                 widget.game.inputSystem.stopAim();
               },
+            ),
+          ),
+          // Skill button
+          Positioned(
+            bottom: 50,
+            right: 180,
+            child: SkillButton(
+              game: widget.game,
+              skillSystem: widget.game.skillSystem,
             ),
           ),
           // Next room button

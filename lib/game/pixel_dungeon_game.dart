@@ -9,6 +9,7 @@ import '../components/boss.dart';
 import '../components/bullet.dart';
 import '../systems/input_system.dart';
 import '../systems/combat_system.dart';
+import '../systems/skill_system.dart';
 import '../data/game_state.dart';
 import '../data/weapons.dart';
 import '../data/talents.dart';
@@ -26,6 +27,7 @@ class PixelDungeonGame extends FlameGame
 
   final GameState gameState = GameState();
   final InputSystem inputSystem = InputSystem();
+  late SkillSystem skillSystem;
 
   // Floor/Room tracking
   late FloorConfig currentFloorConfig;
@@ -82,6 +84,7 @@ class PixelDungeonGame extends FlameGame
 
     // Setup combat
     combatSystem = CombatSystem(game: this);
+    skillSystem = SkillSystem(game: this);
 
     camera.follow(player);
   }
@@ -155,6 +158,7 @@ class PixelDungeonGame extends FlameGame
   void update(double dt) {
     super.update(dt);
     combatSystem.update(dt);
+    skillSystem.update(dt);
 
     // Check room clear conditions
     if (_isCurrentRoomCleared() && !currentRoom.doorsOpen) {
