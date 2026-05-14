@@ -21,6 +21,7 @@
 | [13-logo-design.md](./13-logo-design.md) | Logo 设计（应激史莱姆）|
 | [14-audio-design.md](./14-audio-design.md) | 完整音频设计（130+ 音效）|
 | [15-enemy-roster.md](./15-enemy-roster.md) | 敌人图鉴（5 家族 30 敌人）|
+| [16-slime-bestiary.md](./16-slime-bestiary.md) | 史莱姆全家族图鉴（23 种史莱姆）|
 
 ## 当前状态
 
