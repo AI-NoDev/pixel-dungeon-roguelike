@@ -11,6 +11,7 @@ import '../components/item_drop.dart';
 import 'bullet.dart';
 import 'dungeon_room.dart';
 import 'enemies/slime_species.dart';
+import 'floating_text.dart';
 
 /// Base enemy class
 class Enemy extends PositionComponent
@@ -96,6 +97,12 @@ class Enemy extends PositionComponent
     if (isDead) return;
     hp -= damage;
 
+    // Show floating damage number
+    game.world.add(FloatingText.damage(
+      position + Vector2(0, -8),
+      damage,
+    ));
+
     body.paint.color = Colors.white;
     Future.delayed(const Duration(milliseconds: 80), () {
       if (!isDead) body.paint.color = color;
@@ -110,7 +117,13 @@ class Enemy extends PositionComponent
 
   void onDeath() {
     game.gameState.enemiesKilled++;
-    game.gameState.gold += (10 + Random().nextInt(10));
+    final goldDrop = 10 + Random().nextInt(10);
+    game.gameState.gold += goldDrop;
+    // Show gold pickup text
+    game.world.add(FloatingText.gold(
+      position + Vector2(0, 4),
+      goldDrop,
+    ));
     // Spawn particles
     ParticleSystem.spawnDeathEffect(game.world, position, color);
     // Try to drop item

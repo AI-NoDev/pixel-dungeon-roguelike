@@ -4,6 +4,7 @@ import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 import '../../systems/particle_system.dart';
 import '../enemy_spawner.dart';
+import '../floating_text.dart';
 
 /// Animation states for slimes
 enum SlimeAnimState { idle, jump, hurt, death }
@@ -157,7 +158,6 @@ abstract class SlimeBase extends Enemy {
       });
     }
   }
-
   /// Override for slime-specific death effects
   void onSlimeDeath() {}
 
@@ -165,7 +165,14 @@ abstract class SlimeBase extends Enemy {
   void onDeath() {
     // Stats
     game.gameState.enemiesKilled++;
-    game.gameState.gold += 10;
+    final goldDrop = 10 + (DateTime.now().millisecondsSinceEpoch % 10);
+    game.gameState.gold += goldDrop;
+
+    // Show gold pickup text
+    game.world.add(FloatingText.gold(
+      position + Vector2(0, 4),
+      goldDrop,
+    ));
 
     // Slime-specific death effects (subclasses override)
     onSlimeDeath();

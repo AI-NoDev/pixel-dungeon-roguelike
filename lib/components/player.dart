@@ -7,6 +7,8 @@ import '../data/weapons.dart';
 import '../data/talents.dart';
 import 'bullet.dart';
 import 'enemy_spawner.dart';
+import 'floating_text.dart';
+import 'aura_effect.dart';
 
 class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, CollisionCallbacks {
   Player({required Vector2 position})
@@ -161,13 +163,42 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     }
 
     if (talent.healAmount > 0) {
-      hp = (hp + talent.healAmount).clamp(0, maxHp);
+      heal(talent.healAmount);
     }
+
+    // Spawn ascension aura (level up effect)
+    game.world.add(AuraEffect(
+      position: position.clone(),
+      color: const Color(0xFFFFD54F),  // golden ascension
+      duration: 1.5,
+      maxRadius: 50,
+      thickness: 3,
+      particleCount: 12,
+    ));
+    game.world.add(AuraEffect(
+      position: position.clone(),
+      color: talent.color,
+      duration: 1.2,
+      maxRadius: 40,
+      thickness: 2,
+      particleCount: 8,
+    ));
+    // Show talent name
+    game.world.add(FloatingText.buff(
+      position + Vector2(0, -20),
+      'LEVEL UP',
+    ));
   }
 
   void takeDamage(double damage) {
     if (isDead) return;
     hp -= damage;
+
+    // Show floating damage number
+    game.world.add(FloatingText.playerDamage(
+      position + Vector2(0, -10),
+      damage,
+    ));
 
     body.paint.color = const Color(0xFFFF5252);
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -182,7 +213,37 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   }
 
   void heal(double amount) {
+    final actualHeal = (amount).clamp(0.0, maxHp - hp);
     hp = (hp + amount).clamp(0, maxHp);
+
+    if (actualHeal > 0) {
+      // Show floating heal text
+      game.world.add(FloatingText.heal(
+        position + Vector2(0, -10),
+        actualHeal.toDouble(),
+      ));
+      // Heal aura
+      game.world.add(AuraEffect(
+        position: position.clone(),
+        color: const Color(0xFF66BB6A),
+        duration: 0.8,
+        maxRadius: 35,
+      ));
+    }
+  }
+
+  /// Trigger a buff aura effect (damage boost, speed boost etc.)
+  void showBuffAura(Color color, String label) {
+    game.world.add(AuraEffect(
+      position: position.clone(),
+      color: color,
+      duration: 1.0,
+      maxRadius: 40,
+    ));
+    game.world.add(FloatingText.buff(
+      position + Vector2(0, -16),
+      label,
+    ));
   }
 
   void reset() {
