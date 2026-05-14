@@ -158,6 +158,7 @@ class PixelDungeonGame extends FlameGame
     super.update(dt);
     combatSystem.update(dt);
     skillSystem.update(dt);
+    enemySpawner.update(dt);
 
     // Check room clear conditions
     if (_isCurrentRoomCleared() && !currentRoom.doorsOpen) {
@@ -174,10 +175,10 @@ class PixelDungeonGame extends FlameGame
       return currentBoss?.isDead ?? false;
     }
 
-    // For combat/elite rooms, require enemies to have been spawned at least once
+    // For combat/elite rooms, all waves must be cleared
     if (roomType == RoomType.combat || roomType == RoomType.elite) {
-      if (currentRoom.enemies.isEmpty) return false; // Not yet spawned
-      return currentRoom.isCleared;
+      return enemySpawner.allWavesDone &&
+             currentRoom.enemies.every((e) => e.isDead || e.isRemoved);
     }
 
     return currentRoom.isCleared;

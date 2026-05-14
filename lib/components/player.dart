@@ -95,20 +95,25 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       position.y = position.y.clamp(40, 560);
     }
 
-    // Auto-aim: find nearest enemy if no manual aim
-    final usingAutoAim = GamePreferences.autoAim && !isShooting;
-    Enemy? autoTarget;
-    if (usingAutoAim) {
-      autoTarget = _findNearestEnemy(GamePreferences.autoAimRange);
+    // Auto-aim: only adjusts aim direction, does NOT auto-fire
+    // Player still needs to hold the right stick to shoot
+    if (GamePreferences.autoAim) {
+      final autoTarget = _findNearestEnemy(GamePreferences.autoAimRange);
       if (autoTarget != null) {
-        aimDirection = (autoTarget.position - position).normalized();
+        final autoDir = (autoTarget.position - position).normalized();
+        // If player isn't manually aiming, snap to enemy
+        if (!isShooting) {
+          aimDirection = autoDir;
+        } else {
+          // Soft assist: blend manual aim toward target
+          aimDirection = (aimDirection + autoDir * 0.3).normalized();
+        }
       }
     }
 
-    // Shooting (manual or auto)
-    final shouldShoot = isShooting || (usingAutoAim && autoTarget != null);
+    // Shooting only when player explicitly fires
     _shootTimer += dt;
-    if (shouldShoot && _shootTimer >= attackInterval) {
+    if (isShooting && _shootTimer >= attackInterval) {
       _shoot();
       _shootTimer = 0;
     }

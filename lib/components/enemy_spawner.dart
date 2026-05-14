@@ -12,6 +12,7 @@ import 'bullet.dart';
 import 'dungeon_room.dart';
 import 'enemies/slime_species.dart';
 import 'floating_text.dart';
+import '../systems/wave_system.dart';
 
 /// Base enemy class
 class Enemy extends PositionComponent
@@ -264,30 +265,27 @@ class EnemySpawner {
 
   EnemySpawner({required this.game});
 
-  void spawnEnemiesForRoom(DungeonRoom room) {
-    final config = game.currentFloorConfig;
-    final enemyCount = config.baseEnemyCount;
+  /// Wave system tied to current room
+  WaveSystem? _waveSystem;
+  WaveSystem? get currentWaveSystem => _waveSystem;
 
-    for (int i = 0; i < enemyCount; i++) {
-      final pos = _randomPositionInRoom();
-      final enemy = _createRandomEnemy(pos, config);
-      game.world.add(enemy);
-      room.enemies.add(enemy);
-    }
+  void spawnEnemiesForRoom(DungeonRoom room) {
+    _waveSystem = WaveSystem(game: game, room: room);
+    _waveSystem!.start(waveCount: 2, spawner: this);
   }
 
   void spawnEliteRoom(DungeonRoom room) {
-    final config = game.currentFloorConfig;
-    // Elite rooms: fewer but stronger enemies
-    final enemyCount = (config.baseEnemyCount * 0.7).ceil();
-
-    for (int i = 0; i < enemyCount; i++) {
-      final pos = _randomPositionInRoom();
-      final enemy = _createEliteEnemy(pos, config);
-      game.world.add(enemy);
-      room.enemies.add(enemy);
-    }
+    _waveSystem = WaveSystem(game: game, room: room);
+    _waveSystem!.start(waveCount: 3, spawner: this);
   }
+
+  /// Called every frame to advance wave logic.
+  void update(double dt) {
+    _waveSystem?.update(this);
+  }
+
+  /// True when all waves cleared.
+  bool get allWavesDone => _waveSystem?.allWavesCleared ?? true;
 
   Vector2 _randomPositionInRoom() {
     double x, y;
@@ -296,6 +294,11 @@ class EnemySpawner {
       y = 60 + _random.nextDouble() * 480;
     } while ((Vector2(x, y) - Vector2(400, 300)).length < 120);
     return Vector2(x, y);
+  }
+
+  /// Public accessor for wave system.
+  Enemy createEnemyForWave(Vector2 position, FloorConfig config) {
+    return _createRandomEnemy(position, config);
   }
 
   Enemy _createRandomEnemy(Vector2 position, FloorConfig config) {

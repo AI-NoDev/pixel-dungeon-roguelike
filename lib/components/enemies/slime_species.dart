@@ -7,8 +7,11 @@ import 'slime_base.dart';
 // ============================================================
 
 class GreenSlime extends SlimeBase {
-  GreenSlime({required super.position, int difficulty = 1})
-      : super(
+  GreenSlime({
+    required super.position,
+    int difficulty = 1,
+    this.canSplit = true,
+  }) : super(
           maxHp: 30 + difficulty * 5,
           speed: 60 + difficulty * 3,
           contactDamage: 10 + difficulty * 2,
@@ -16,6 +19,39 @@ class GreenSlime extends SlimeBase {
           spriteId: 'green',
           canvasSize: 16,
         );
+
+  final bool canSplit;
+
+  @override
+  void onSlimeDeath() {
+    if (!canSplit) return;
+    // 30% chance to split into 2 mini slimes
+    if (DateTime.now().millisecondsSinceEpoch % 100 < 30) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        for (int i = 0; i < 2; i++) {
+          final dx = (i == 0 ? -10.0 : 10.0);
+          final mini = MiniSlime(position: position + Vector2(dx, 0));
+          game.world.add(mini);
+        }
+      });
+    }
+  }
+}
+
+/// Half-size green slime spawned by splitting parents.
+class MiniSlime extends SlimeBase {
+  MiniSlime({required super.position})
+      : super(
+          maxHp: 12,
+          speed: 90,
+          contactDamage: 5,
+          color: const Color(0xFF81C784),
+          spriteId: 'green',
+          canvasSize: 16,
+        );
+
+  @override
+  double get displayScale => 1.2; // smaller visual
 }
 
 class PinkBouncer extends SlimeBase {
@@ -108,8 +144,8 @@ class MegaGoo extends SlimeBase {
     // Split into 2 Green Slimes
     Future.delayed(const Duration(milliseconds: 400), () {
       if (!isMounted) {
-        game.world.add(GreenSlime(position: position + Vector2(-20, 0)));
-        game.world.add(GreenSlime(position: position + Vector2(20, 0)));
+        game.world.add(GreenSlime(position: position + Vector2(-20, 0), canSplit: false));
+        game.world.add(GreenSlime(position: position + Vector2(20, 0), canSplit: false));
       }
     });
   }
@@ -330,7 +366,6 @@ class SlimeKnight extends SlimeBase {
     });
   }
 }
-
 class SlimeMage extends SlimeBase {
   SlimeMage({required super.position, int difficulty = 1})
       : super(
