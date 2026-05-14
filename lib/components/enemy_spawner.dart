@@ -68,7 +68,7 @@ class Enemy extends PositionComponent
     if (shootInterval > 0) {
       _shootTimer += dt;
       if (_shootTimer >= shootInterval) {
-        _shoot();
+        shoot();
         _shootTimer = 0;
       }
     }
@@ -77,7 +77,7 @@ class Enemy extends PositionComponent
     position.y = position.y.clamp(30, 570);
   }
 
-  void _shoot() {
+  void shoot() {
     final player = game.player;
     final direction = (player.position - position).normalized();
 
@@ -103,11 +103,11 @@ class Enemy extends PositionComponent
     if (hp <= 0) {
       hp = 0;
       isDead = true;
-      _onDeath();
+      onDeath();
     }
   }
 
-  void _onDeath() {
+  void onDeath() {
     game.gameState.enemiesKilled++;
     game.gameState.gold += (10 + Random().nextInt(10));
     // Spawn particles
@@ -223,7 +223,7 @@ class BomberEnemy extends Enemy {
         );
 
   @override
-  void _onDeath() {
+  void onDeath() {
     // Explode: shoot bullets in all directions
     for (int i = 0; i < 8; i++) {
       final angle = (2 * pi / 8) * i;
@@ -238,7 +238,7 @@ class BomberEnemy extends Enemy {
       );
       game.world.add(bullet);
     }
-    super._onDeath();
+    super.onDeath();
   }
 }
 
