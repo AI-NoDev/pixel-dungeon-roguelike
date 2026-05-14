@@ -7,6 +7,7 @@ import '../components/dungeon_room.dart';
 import '../components/enemy_spawner.dart';
 import '../components/boss.dart';
 import '../components/bullet.dart';
+import '../components/decal.dart';
 import '../systems/input_system.dart';
 import '../systems/combat_system.dart';
 import '../systems/skill_system.dart';
@@ -289,6 +290,8 @@ class PixelDungeonGame extends FlameGame
     currentBoss = null;
     // Remove bullets
     world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
+    // Remove decals (corpses, slime puddles, bullet holes)
+    world.children.whereType<Decal>().forEach((d) => d.removeFromParent());
   }
 
   void onPlayerDeath() {

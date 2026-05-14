@@ -128,6 +128,8 @@ class ElementSystem {
       case ElementType.poison:
         _applyPoison(game, enemy, damage * 0.2);
         break;
+      case ElementType.holy:
+      case ElementType.dark:
       case ElementType.none:
         break;
     }
@@ -143,6 +145,10 @@ class ElementSystem {
         return 0.5;
       case ElementType.poison:
         return 4.0;
+      case ElementType.holy:
+        return 1.5;
+      case ElementType.dark:
+        return 3.0;
       case ElementType.none:
         return 0;
     }

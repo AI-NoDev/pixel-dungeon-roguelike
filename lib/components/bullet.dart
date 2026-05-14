@@ -95,6 +95,10 @@ class Bullet extends PositionComponent
         return 'bullet_lightning';
       case ElementType.poison:
         return 'bullet_poison';
+      case ElementType.holy:
+        return 'bullet_holy';
+      case ElementType.dark:
+        return 'bullet_dark';
       case ElementType.none:
         return 'bullet_basic';
     }

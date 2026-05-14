@@ -3,9 +3,21 @@ import 'package:flutter/material.dart';
 
 enum WeaponRarity { common, uncommon, rare, epic, legendary }
 
-enum WeaponType { pistol, shotgun, rifle, smg, sniper, magic }
+enum WeaponType {
+  pistol,
+  shotgun,
+  rifle,
+  smg,
+  sniper,
+  magic,
+  laser,      // 激光枪 - 持续光束
+  rocket,     // 火箭弹 - 爆炸AoE
+  knife,      // 飞刀 - 高速旋转
+  bow,        // 弓箭 - 高暴击
+  crossbow,   // 弩 - 强穿透
+}
 
-enum ElementType { none, fire, ice, lightning, poison }
+enum ElementType { none, fire, ice, lightning, poison, holy, dark }
 
 class WeaponData {
   final String name;
@@ -268,6 +280,113 @@ class WeaponPool {
       spread: 0.2,
       color: Color(0xFFFFD700),
       spriteId: 'staff_of_eternity',
+    ),
+
+    // === LASER ===
+    const WeaponData(
+      name: 'Laser Cutter',
+      type: WeaponType.laser,
+      rarity: WeaponRarity.uncommon,
+      damage: 12,
+      fireRate: 6,
+      bulletSpeed: 600,
+      color: Color(0xFFFF1744),
+      spriteId: 'laser_cutter',
+    ),
+    const WeaponData(
+      name: 'Plasma Beam',
+      type: WeaponType.laser,
+      rarity: WeaponRarity.rare,
+      element: ElementType.lightning,
+      damage: 16,
+      fireRate: 8,
+      bulletSpeed: 700,
+      color: Color(0xFF00E5FF),
+      spriteId: 'plasma_beam',
+    ),
+
+    // === ROCKET ===
+    const WeaponData(
+      name: 'Rocket Launcher',
+      type: WeaponType.rocket,
+      rarity: WeaponRarity.rare,
+      element: ElementType.fire,
+      damage: 60,
+      fireRate: 0.6,
+      bulletSpeed: 250,
+      color: Color(0xFFBF360C),
+      spriteId: 'rocket_launcher',
+    ),
+    const WeaponData(
+      name: 'Cluster Bomb',
+      type: WeaponType.rocket,
+      rarity: WeaponRarity.epic,
+      element: ElementType.fire,
+      damage: 40,
+      fireRate: 0.5,
+      bulletSpeed: 200,
+      bulletsPerShot: 3,
+      spread: 0.4,
+      color: Color(0xFFFF6F00),
+      spriteId: 'cluster_bomb',
+    ),
+
+    // === KNIFE / THROWING ===
+    const WeaponData(
+      name: 'Throwing Knives',
+      type: WeaponType.knife,
+      rarity: WeaponRarity.common,
+      damage: 10,
+      fireRate: 5,
+      bulletSpeed: 450,
+      color: Color(0xFFB0BEC5),
+      spriteId: 'throwing_knives',
+    ),
+    const WeaponData(
+      name: 'Shadow Daggers',
+      type: WeaponType.knife,
+      rarity: WeaponRarity.rare,
+      element: ElementType.dark,
+      damage: 14,
+      fireRate: 6,
+      bulletSpeed: 480,
+      bulletsPerShot: 2,
+      spread: 0.1,
+      color: Color(0xFF311B92),
+      spriteId: 'shadow_daggers',
+    ),
+
+    // === BOW / CROSSBOW ===
+    const WeaponData(
+      name: 'Compound Bow',
+      type: WeaponType.bow,
+      rarity: WeaponRarity.uncommon,
+      damage: 35,
+      fireRate: 1.5,
+      bulletSpeed: 480,
+      color: Color(0xFF8D6E63),
+      spriteId: 'compound_bow',
+    ),
+    const WeaponData(
+      name: 'Heavy Crossbow',
+      type: WeaponType.crossbow,
+      rarity: WeaponRarity.rare,
+      damage: 80,
+      fireRate: 0.5,
+      bulletSpeed: 600,
+      color: Color(0xFF5D4037),
+      spriteId: 'heavy_crossbow',
+    ),
+    const WeaponData(
+      name: 'Holy Lance',
+      type: WeaponType.crossbow,
+      rarity: WeaponRarity.legendary,
+      element: ElementType.holy,
+      damage: 100,
+      fireRate: 0.7,
+      bulletSpeed: 700,
+      color: Color(0xFFFFF59D),
+      spriteId: 'holy_lance',
     ),
   ];
 

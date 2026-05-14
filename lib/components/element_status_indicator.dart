@@ -29,6 +29,10 @@ class ElementStatusIndicator extends PositionComponent {
         return const Color(0xFFFFEB3B);
       case ElementType.poison:
         return const Color(0xFF76FF03);
+      case ElementType.holy:
+        return const Color(0xFFFFD700);
+      case ElementType.dark:
+        return const Color(0xFF7C4DFF);
       case ElementType.none:
         return Colors.white;
     }
@@ -64,6 +68,12 @@ class ElementStatusIndicator extends PositionComponent {
         break;
       case ElementType.poison:
         _drawPoison(canvas, alpha, pulse);
+        break;
+      case ElementType.holy:
+        _drawPoison(canvas, alpha, pulse); // reuse for now
+        break;
+      case ElementType.dark:
+        _drawPoison(canvas, alpha, pulse); // reuse for now
         break;
       case ElementType.none:
         break;

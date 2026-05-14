@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../systems/particle_system.dart';
 import '../enemy_spawner.dart';
 import '../floating_text.dart';
+import '../decal.dart';
 
 /// Animation states for slimes
 enum SlimeAnimState { idle, jump, hurt, death }
@@ -192,6 +193,14 @@ abstract class SlimeBase extends Enemy {
 
     // Particles
     ParticleSystem.spawnDeathEffect(game.world, position, color);
+
+    // Leave a slime puddle on the ground (permanent for room)
+    game.world.add(Decal(
+      position: position.clone(),
+      type: DecalType.slimePuddle,
+      color: color,
+      size_: canvasSize,
+    ));
 
     // Play death animation, then remove
     _setState(SlimeAnimState.death);

@@ -10,6 +10,7 @@ import 'bullet.dart';
 import 'enemy_spawner.dart';
 import 'floating_text.dart';
 import 'aura_effect.dart';
+import 'decal.dart';
 
 class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, CollisionCallbacks {
   Player({required Vector2 position})
@@ -236,6 +237,14 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     game.world.add(FloatingText.playerDamage(
       position + Vector2(0, -10),
       damage,
+    ));
+
+    // Blood splat decal at feet
+    game.world.add(Decal(
+      position: position + Vector2(0, 8),
+      type: DecalType.bloodSplat,
+      color: const Color(0xFF7F0000),
+      size_: 14,
     ));
 
     body.paint.color = const Color(0xFFFF5252);

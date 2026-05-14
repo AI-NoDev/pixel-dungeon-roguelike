@@ -9,6 +9,7 @@ import '../systems/particle_system.dart';
 import '../systems/element_system.dart';
 import '../components/item_drop.dart';
 import 'bullet.dart';
+import 'decal.dart';
 import 'dungeon_room.dart';
 import 'enemies/slime_species.dart';
 import 'floating_text.dart';
@@ -128,6 +129,13 @@ class Enemy extends PositionComponent
     ));
     // Spawn particles
     ParticleSystem.spawnDeathEffect(game.world, position, color);
+    // Leave corpse decal (permanent for the room)
+    game.world.add(Decal(
+      position: position.clone(),
+      type: DecalType.corpse,
+      color: color,
+      size_: 16,
+    ));
     // Try to drop item
     ItemDropSystem.trySpawnDrop(game, position);
     removeFromParent();
@@ -142,6 +150,13 @@ class Enemy extends PositionComponent
       if (other.element != ElementType.none) {
         ElementSystem.applyElement(game, this, other.element, other.damage);
       }
+      // Leave a small bullet decal at impact point
+      game.world.add(Decal(
+        position: other.position.clone(),
+        type: DecalType.bulletHole,
+        color: Colors.black,
+        size_: 6,
+      ));
       other.removeFromParent();
     }
   }
