@@ -1,5 +1,4 @@
 import 'package:flame/components.dart';
-import 'package:flame/effects.dart';
 import 'package:flame/text.dart';
 import 'package:flutter/material.dart';
 
@@ -13,64 +12,73 @@ class FloatingText extends TextComponent {
     bool bold = true,
     this.duration = 1.0,
     this.driftDistance = 30,
-    this.outlineColor = const Color(0xFF000000),
-  }) : super(
+  })  : _color = color,
+        _fontSize = fontSize,
+        _bold = bold,
+        super(
           text: text,
           position: position,
           anchor: Anchor.center,
-          textRenderer: TextPaint(
-            style: TextStyle(
-              color: color,
-              fontSize: fontSize,
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              shadows: [
-                Shadow(
-                  color: const Color(0xFF000000),
-                  offset: const Offset(1, 1),
-                  blurRadius: 0,
-                ),
-                Shadow(
-                  color: const Color(0xFF000000),
-                  offset: const Offset(-1, -1),
-                  blurRadius: 0,
-                ),
-                Shadow(
-                  color: const Color(0xFF000000),
-                  offset: const Offset(1, -1),
-                  blurRadius: 0,
-                ),
-                Shadow(
-                  color: const Color(0xFF000000),
-                  offset: const Offset(-1, 1),
-                  blurRadius: 0,
-                ),
-              ],
-            ),
-          ),
         );
 
   final double duration;
   final double driftDistance;
-  final Color outlineColor;
+  final Color _color;
+  final double _fontSize;
+  final bool _bold;
+
+  double _elapsed = 0;
+  late final Vector2 _startPos;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    _startPos = position.clone();
+    _updateRenderer(1.0);
+  }
 
-    // Drift upward
-    add(MoveEffect.by(
-      Vector2(0, -driftDistance),
-      EffectController(duration: duration, curve: Curves.easeOut),
-    ));
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _elapsed += dt;
 
-    // Fade out and remove
-    add(OpacityEffect.fadeOut(
-      EffectController(
-        duration: duration * 0.7,
-        startDelay: duration * 0.3,
+    final progress = (_elapsed / duration).clamp(0.0, 1.0);
+
+    // Drift upward (ease out)
+    final easeOut = 1 - (1 - progress) * (1 - progress);
+    position = _startPos + Vector2(0, -driftDistance * easeOut);
+
+    // Fade in last 30%
+    final fadeStart = 0.3;
+    double alpha = 1.0;
+    if (progress > fadeStart) {
+      alpha = 1.0 - (progress - fadeStart) / (1.0 - fadeStart);
+    }
+    _updateRenderer(alpha.clamp(0.0, 1.0));
+
+    if (_elapsed >= duration) {
+      removeFromParent();
+    }
+  }
+
+  void _updateRenderer(double alpha) {
+    final faded = _color.withValues(alpha: alpha);
+    final shadowAlpha = (alpha * 255).round();
+    final shadowColor = Color.fromARGB(shadowAlpha, 0, 0, 0);
+
+    textRenderer = TextPaint(
+      style: TextStyle(
+        color: faded,
+        fontSize: _fontSize,
+        fontWeight: _bold ? FontWeight.bold : FontWeight.normal,
+        shadows: [
+          Shadow(color: shadowColor, offset: const Offset(1, 1)),
+          Shadow(color: shadowColor, offset: const Offset(-1, -1)),
+          Shadow(color: shadowColor, offset: const Offset(1, -1)),
+          Shadow(color: shadowColor, offset: const Offset(-1, 1)),
+        ],
       ),
-      onComplete: () => removeFromParent(),
-    ));
+    );
   }
 
   // Convenience constructors
