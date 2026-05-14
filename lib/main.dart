@@ -1,13 +1,16 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'game/pixel_dungeon_game.dart';
 import 'ui/game_overlay.dart';
 import 'ui/main_menu.dart';
-import 'data/game_state.dart';
+import 'ui/loading_screen.dart';
+import 'ui/save_slot_screen.dart';
 import 'data/heroes.dart';
-import 'systems/save_system.dart';
 import 'systems/audio_system.dart';
+import 'systems/save_slot_system.dart';
+import 'i18n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +18,7 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
   await AudioSystem.init();
 
   runApp(const PixelDungeonApp());
@@ -26,17 +29,30 @@ class PixelDungeonApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0D0D1A),
-      ),
-      home: const GameRoot(),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: localeNotifier,
+      builder: (context, locale, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData.dark().copyWith(
+            scaffoldBackgroundColor: const Color(0xFF0D0D1A),
+          ),
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizationsDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const GameRoot(),
+        );
+      },
     );
   }
 }
 
-enum AppScreen { menu, game }
+enum AppScreen { loading, saveSlot, menu, game }
 
 class GameRoot extends StatefulWidget {
   const GameRoot({super.key});
@@ -46,40 +62,39 @@ class GameRoot extends StatefulWidget {
 }
 
 class _GameRootState extends State<GameRoot> {
-  AppScreen _currentScreen = AppScreen.menu;
-  final GameState _persistentState = GameState();
+  AppScreen _currentScreen = AppScreen.loading;
   PixelDungeonGame? _game;
-  bool _loaded = false;
+  SaveSlotData? _activeSaveSlot;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSaveData();
+  void _onLoadingComplete() {
+    if (mounted) {
+      setState(() => _currentScreen = AppScreen.saveSlot);
+    }
   }
 
-  Future<void> _loadSaveData() async {
-    await SaveSystem.loadPersistentData(_persistentState);
-    setState(() => _loaded = true);
+  void _onSlotSelected(SaveSlotData slot) {
+    SaveSlotSystem.activeSlotIndex = slot.slotIndex;
+    setState(() {
+      _activeSaveSlot = slot;
+      _currentScreen = AppScreen.menu;
+    });
   }
 
   void _startGame(HeroData hero) {
     final game = PixelDungeonGame();
     game.selectedHero = hero;
 
-    // When game ends, sync persistent state
+    if (_activeSaveSlot != null) {
+      game.gameState.currentFloor = _activeSaveSlot!.currentFloor;
+      game.gameState.bestFloor = _activeSaveSlot!.bestFloor;
+      game.gameState.totalRuns = _activeSaveSlot!.totalRuns;
+      game.gameState.totalGoldEarned = _activeSaveSlot!.totalGold;
+      game.gameState.gold = _activeSaveSlot!.currentGold;
+    }
+
     game.onStateChanged = () {
       if (game.gameState.isGameOver) {
-        _persistentState.totalRuns = game.gameState.totalRuns;
-        _persistentState.totalGoldEarned = game.gameState.totalGoldEarned;
-        if (game.gameState.currentFloor > _persistentState.bestFloor) {
-          _persistentState.bestFloor = game.gameState.currentFloor;
-        }
-        SaveSystem.savePersistentData(_persistentState);
-        SaveSystem.saveHighScore(
-          game.gameState.currentFloor,
-          game.gameState.enemiesKilled,
-          game.gameState.gold,
-        );
+        _saveCurrentSlot(game);
       }
     };
 
@@ -89,37 +104,111 @@ class _GameRootState extends State<GameRoot> {
     });
   }
 
+  Future<void> _saveCurrentSlot(PixelDungeonGame game) async {
+    if (_activeSaveSlot == null) return;
+    final updated = _activeSaveSlot!.copyWith(
+      currentFloor: game.gameState.currentFloor,
+      totalRuns: game.gameState.totalRuns,
+      bestFloor: game.gameState.currentFloor > _activeSaveSlot!.bestFloor
+          ? game.gameState.currentFloor
+          : _activeSaveSlot!.bestFloor,
+      totalGold: game.gameState.totalGoldEarned,
+      currentGold: game.gameState.gold,
+      lastPlayed: DateTime.now(),
+    );
+    await SaveSlotSystem.saveSlot(updated);
+    _activeSaveSlot = updated;
+  }
+
   void _returnToMenu() {
     _game?.pauseEngine();
+    if (_game != null) _saveCurrentSlot(_game!);
     setState(() {
       _currentScreen = AppScreen.menu;
       _game = null;
     });
   }
 
+  void _returnToSaveSlots() {
+    setState(() {
+      _activeSaveSlot = null;
+      _currentScreen = AppScreen.saveSlot;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     switch (_currentScreen) {
+      case AppScreen.loading:
+        return LoadingScreen(onLoaded: _onLoadingComplete);
+
+      case AppScreen.saveSlot:
+        return SaveSlotScreen(onSlotSelected: _onSlotSelected);
+
       case AppScreen.menu:
-        return MainMenu(
-          gameState: _persistentState,
+        return MainMenuWithBack(
+          slotData: _activeSaveSlot!,
           onStartGame: _startGame,
+          onBack: _returnToSaveSlots,
         );
+
       case AppScreen.game:
         return Scaffold(
           body: Stack(
+            fit: StackFit.expand,
             children: [
-              GameWidget(game: _game!),
-              GameOverlay(game: _game!, onReturnToMenu: _returnToMenu),
+              Positioned.fill(
+                child: GameWidget(game: _game!),
+              ),
+              Positioned.fill(
+                child: GameOverlay(
+                  game: _game!,
+                  onReturnToMenu: _returnToMenu,
+                ),
+              ),
             ],
           ),
         );
     }
+  }
+}
+
+class MainMenuWithBack extends StatelessWidget {
+  final SaveSlotData slotData;
+  final Function(HeroData) onStartGame;
+  final VoidCallback onBack;
+
+  const MainMenuWithBack({
+    super.key,
+    required this.slotData,
+    required this.onStartGame,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          MainMenu(
+            slotData: slotData,
+            onStartGame: onStartGame,
+          ),
+          Positioned(
+            top: 12,
+            left: 12,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black38,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import '../data/heroes.dart';
-import '../data/game_state.dart';
+import '../systems/save_slot_system.dart';
+import '../i18n/app_localizations.dart';
 
 class MainMenu extends StatefulWidget {
-  final GameState gameState;
+  final SaveSlotData slotData;
   final Function(HeroData) onStartGame;
 
   const MainMenu({
     super.key,
-    required this.gameState,
+    required this.slotData,
     required this.onStartGame,
   });
 
@@ -58,23 +59,24 @@ class _MainMenuState extends State<MainMenu> {
   }
 
   Widget _buildTitle() {
+    final t = AppLocalizations.of(context);
     return Column(
       children: [
-        const Text(
-          'PIXEL DUNGEON',
-          style: TextStyle(
+        Text(
+          t.t('app_title'),
+          style: const TextStyle(
             color: Colors.white,
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             letterSpacing: 4,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'SURVIVORS',
+          t.t('app_subtitle'),
           style: TextStyle(
             color: Colors.amber.shade400,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w300,
             letterSpacing: 8,
           ),
@@ -84,19 +86,34 @@ class _MainMenuState extends State<MainMenu> {
   }
 
   Widget _buildStats() {
+    final t = AppLocalizations.of(context);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 40),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.black26,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _statItem('Runs', '${widget.gameState.totalRuns}'),
-          _statItem('Best Floor', '${widget.gameState.bestFloor}'),
-          _statItem('Gold', '${widget.gameState.totalGoldEarned}'),
+          Text(
+            t.t('save_slot', {'n': '${widget.slotData.slotIndex + 1}'}),
+            style: TextStyle(
+              color: const Color(0xFF4FC3F7),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _statItem(t.t('total_runs'), '${widget.slotData.totalRuns}'),
+              _statItem(t.t('best_floor'), '${widget.slotData.bestFloor}'),
+              _statItem(t.t('gold'), '${widget.slotData.currentGold}'),
+            ],
+          ),
         ],
       ),
     );
@@ -109,7 +126,7 @@ class _MainMenuState extends State<MainMenu> {
           value,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -117,7 +134,7 @@ class _MainMenuState extends State<MainMenu> {
           label,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 11,
+            fontSize: 10,
           ),
         ),
       ],
@@ -125,12 +142,13 @@ class _MainMenuState extends State<MainMenu> {
   }
 
   Widget _buildHeroSelection() {
+    final t = AppLocalizations.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'SELECT HERO',
-          style: TextStyle(
+        Text(
+          t.t('select_hero'),
+          style: const TextStyle(
             color: Colors.white70,
             fontSize: 12,
             letterSpacing: 2,
@@ -148,7 +166,7 @@ class _MainMenuState extends State<MainMenu> {
               final hero = HeroData.all[index];
               final isSelected = index == _selectedHeroIndex;
               final isLocked = hero.unlockCost > 0 &&
-                  widget.gameState.totalGoldEarned < hero.unlockCost;
+                  widget.slotData.totalGold < hero.unlockCost;
 
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -171,7 +189,6 @@ class _MainMenuState extends State<MainMenu> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Hero avatar
                     Container(
                       width: 48,
                       height: 48,
@@ -187,7 +204,7 @@ class _MainMenuState extends State<MainMenu> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      hero.name,
+                      _getHeroName(t, hero),
                       style: TextStyle(
                         color: isLocked ? Colors.white38 : hero.color,
                         fontSize: 14,
@@ -196,7 +213,7 @@ class _MainMenuState extends State<MainMenu> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      hero.description,
+                      _getHeroDesc(t, hero),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 9,
@@ -206,13 +223,11 @@ class _MainMenuState extends State<MainMenu> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
-                    // Stats
                     _heroStat('HP', hero.maxHp.toInt(), 200),
                     _heroStat('SPD', hero.speed.toInt(), 250),
                     _heroStat('DMG', hero.damage.toInt(), 50),
                     _heroStat('ATK', (hero.fireRate * 10).toInt(), 60),
                     const SizedBox(height: 6),
-                    // Skill
                     Text(
                       hero.skill,
                       style: TextStyle(
@@ -224,7 +239,7 @@ class _MainMenuState extends State<MainMenu> {
                     if (isLocked) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Unlock: ${hero.unlockCost} gold',
+                        t.t('unlock_cost', {'gold': '${hero.unlockCost}'}),
                         style: const TextStyle(
                           color: Colors.amber,
                           fontSize: 9,
@@ -239,6 +254,32 @@ class _MainMenuState extends State<MainMenu> {
         ),
       ],
     );
+  }
+
+  String _getHeroName(AppLocalizations t, HeroData hero) {
+    switch (hero.type) {
+      case HeroType.knight:
+        return t.t('hero_knight');
+      case HeroType.ranger:
+        return t.t('hero_ranger');
+      case HeroType.mage:
+        return t.t('hero_mage');
+      case HeroType.rogue:
+        return t.t('hero_rogue');
+    }
+  }
+
+  String _getHeroDesc(AppLocalizations t, HeroData hero) {
+    switch (hero.type) {
+      case HeroType.knight:
+        return t.t('hero_knight_desc');
+      case HeroType.ranger:
+        return t.t('hero_ranger_desc');
+      case HeroType.mage:
+        return t.t('hero_mage_desc');
+      case HeroType.rogue:
+        return t.t('hero_rogue_desc');
+    }
   }
 
   Widget _heroStat(String label, int value, int maxValue) {
@@ -281,22 +322,23 @@ class _MainMenuState extends State<MainMenu> {
   }
 
   Widget _buildStartButton() {
+    final t = AppLocalizations.of(context);
     final hero = HeroData.all[_selectedHeroIndex];
     final isLocked = hero.unlockCost > 0 &&
-        widget.gameState.totalGoldEarned < hero.unlockCost;
+        widget.slotData.totalGold < hero.unlockCost;
 
     return ElevatedButton(
       onPressed: isLocked ? null : () => widget.onStartGame(hero),
       style: ElevatedButton.styleFrom(
         backgroundColor: isLocked ? Colors.grey.shade800 : hero.color,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Text(
-        isLocked ? 'LOCKED' : 'START DUNGEON',
+        isLocked ? t.t('locked') : t.t('start_dungeon'),
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
           letterSpacing: 2,
         ),

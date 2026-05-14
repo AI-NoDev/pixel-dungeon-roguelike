@@ -8,8 +8,6 @@ import 'weapon_pickup.dart';
 import 'shop_widget.dart';
 import 'skill_button.dart';
 
-enum OverlayState { playing, talentPicker, weaponPickup, shop, gameOver }
-
 class GameOverlay extends StatefulWidget {
   final PixelDungeonGame game;
   final VoidCallback onReturnToMenu;
@@ -25,7 +23,10 @@ class GameOverlay extends StatefulWidget {
 }
 
 class _GameOverlayState extends State<GameOverlay> {
-  OverlayState _state = OverlayState.playing;
+  bool _showTalentPicker = false;
+  bool _showWeaponPickup = false;
+  bool _showShop = false;
+  bool _showGameOver = false;
 
   @override
   void initState() {
@@ -35,13 +36,13 @@ class _GameOverlayState extends State<GameOverlay> {
 
   void _setupCallbacks() {
     widget.game.onShowTalentPicker = () {
-      setState(() => _state = OverlayState.talentPicker);
+      if (mounted) setState(() => _showTalentPicker = true);
     };
     widget.game.onShowWeaponPickup = () {
-      setState(() => _state = OverlayState.weaponPickup);
+      if (mounted) setState(() => _showWeaponPickup = true);
     };
     widget.game.onShowShop = () {
-      setState(() => _state = OverlayState.shop);
+      if (mounted) setState(() => _showShop = true);
     };
 
     final originalOnStateChanged = widget.game.onStateChanged;
@@ -49,11 +50,7 @@ class _GameOverlayState extends State<GameOverlay> {
       originalOnStateChanged?.call();
       if (mounted) {
         setState(() {
-          if (widget.game.gameState.isGameOver) {
-            _state = OverlayState.gameOver;
-          } else {
-            _state = OverlayState.playing;
-          }
+          _showGameOver = widget.game.gameState.isGameOver;
         });
       }
     };
@@ -61,30 +58,32 @@ class _GameOverlayState extends State<GameOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // HUD
-        Positioned(
-          top: 16,
-          left: 16,
-          right: 16,
-          child: HudWidget(game: widget.game),
-        ),
-
-        // Pause button
-        Positioned(
-          top: 16,
-          right: 16,
-          child: _buildPauseButton(),
-        ),
-
-        // Joysticks - only when playing
-        if (_state == OverlayState.playing) ...[
+    return SafeArea(
+      child: Stack(
+        children: [
+          // HUD - always visible
           Positioned(
-            bottom: 40,
-            left: 40,
+            top: 16,
+            left: 16,
+            right: 16,
+            child: HudWidget(game: widget.game),
+          ),
+
+          // Pause button
+          Positioned(
+            top: 16,
+            right: 16,
+            child: _buildPauseButton(),
+          ),
+
+          // Move joystick - left
+          Positioned(
+            bottom: 60,
+            left: 120,
             child: JoystickWidget(
-              size: 120,
+              size: 130,
+              color: Colors.blue.withValues(alpha: 0.5),
+              knobColor: Colors.lightBlueAccent,
               onDirectionChanged: (direction) {
                 widget.game.inputSystem.updateMove(
                   Vector2(direction.dx, direction.dy),
@@ -95,12 +94,14 @@ class _GameOverlayState extends State<GameOverlay> {
               },
             ),
           ),
+
+          // Aim/shoot joystick - right
           Positioned(
-            bottom: 40,
-            right: 40,
+            bottom: 60,
+            right: 120,
             child: JoystickWidget(
-              size: 120,
-              color: Colors.red.withValues(alpha: 0.3),
+              size: 130,
+              color: Colors.red.withValues(alpha: 0.5),
               knobColor: Colors.redAccent,
               onDirectionChanged: (direction) {
                 widget.game.inputSystem.updateAim(
@@ -112,16 +113,18 @@ class _GameOverlayState extends State<GameOverlay> {
               },
             ),
           ),
+
           // Skill button
           Positioned(
-            bottom: 50,
-            right: 180,
+            bottom: 80,
+            right: 270,
             child: SkillButton(
               game: widget.game,
               skillSystem: widget.game.skillSystem,
             ),
           ),
-          // Next room button
+
+          // Next room button (when room cleared)
           StreamBuilder<void>(
             stream: Stream.periodic(const Duration(milliseconds: 300)),
             builder: (context, _) {
@@ -152,55 +155,52 @@ class _GameOverlayState extends State<GameOverlay> {
               return const SizedBox.shrink();
             },
           ),
+
+          // Talent picker overlay
+          if (_showTalentPicker && widget.game.pendingTalentChoices != null)
+            TalentPicker(
+              game: widget.game,
+              choices: widget.game.pendingTalentChoices!,
+              onPicked: () {
+                widget.game.onTalentPicked();
+                setState(() {
+                  _showTalentPicker = false;
+                  if (widget.game.pendingWeapon != null) {
+                    _showWeaponPickup = true;
+                  }
+                });
+              },
+            ),
+
+          // Weapon pickup overlay
+          if (_showWeaponPickup && widget.game.pendingWeapon != null)
+            WeaponPickupDialog(
+              game: widget.game,
+              weapon: widget.game.pendingWeapon!,
+              onAccept: () {
+                widget.game.onWeaponAccepted();
+                setState(() => _showWeaponPickup = false);
+              },
+              onDecline: () {
+                widget.game.onWeaponDeclined();
+                setState(() => _showWeaponPickup = false);
+              },
+            ),
+
+          // Shop overlay
+          if (_showShop)
+            ShopWidget(
+              game: widget.game,
+              onClose: () {
+                widget.game.resumeEngine();
+                setState(() => _showShop = false);
+              },
+            ),
+
+          // Game over overlay
+          if (_showGameOver) _buildGameOverOverlay(),
         ],
-
-        // Talent picker
-        if (_state == OverlayState.talentPicker &&
-            widget.game.pendingTalentChoices != null)
-          TalentPicker(
-            game: widget.game,
-            choices: widget.game.pendingTalentChoices!,
-            onPicked: () {
-              widget.game.onTalentPicked();
-              setState(() {
-                if (widget.game.pendingWeapon != null) {
-                  _state = OverlayState.weaponPickup;
-                } else {
-                  _state = OverlayState.playing;
-                }
-              });
-            },
-          ),
-
-        // Weapon pickup
-        if (_state == OverlayState.weaponPickup &&
-            widget.game.pendingWeapon != null)
-          WeaponPickupDialog(
-            game: widget.game,
-            weapon: widget.game.pendingWeapon!,
-            onAccept: () {
-              widget.game.onWeaponAccepted();
-              setState(() => _state = OverlayState.playing);
-            },
-            onDecline: () {
-              widget.game.onWeaponDeclined();
-              setState(() => _state = OverlayState.playing);
-            },
-          ),
-
-        // Shop overlay
-        if (_state == OverlayState.shop)
-          ShopWidget(
-            game: widget.game,
-            onClose: () {
-              widget.game.resumeEngine();
-              setState(() => _state = OverlayState.playing);
-            },
-          ),
-
-        // Game over
-        if (_state == OverlayState.gameOver) _buildGameOverOverlay(),
-      ],
+      ),
     );
   }
 
@@ -230,7 +230,7 @@ class _GameOverlayState extends State<GameOverlay> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Floor ${widget.game.gameState.currentFloor} - ${widget.game.currentRoomLabel}',
+              'Floor ${widget.game.gameState.currentFloor}',
               style: const TextStyle(color: Colors.white70),
             ),
           ],
@@ -289,7 +289,7 @@ class _GameOverlayState extends State<GameOverlay> {
                   ElevatedButton(
                     onPressed: () {
                       widget.game.restartGame();
-                      setState(() => _state = OverlayState.playing);
+                      setState(() => _showGameOver = false);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,

@@ -12,8 +12,6 @@ class HudWidget extends StatelessWidget {
     return StreamBuilder<void>(
       stream: Stream.periodic(const Duration(milliseconds: 100)),
       builder: (context, _) {
-        if (!game.isLoaded) return const SizedBox.shrink();
-
         return Column(
           children: [
             // Top row: HP, Floor, Room, Gold
@@ -29,12 +27,13 @@ class HudWidget extends StatelessWidget {
               ],
             ),
             // Minimap (room progress)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: MinimapWidget(game: game),
-            ),
+            if (game.isLoaded)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: MinimapWidget(game: game),
+              ),
             // Boss HP bar (if in boss room)
-            if (game.currentBoss != null && !(game.currentBoss!.isDead))
+            if (game.isLoaded && game.currentBoss != null && !(game.currentBoss!.isDead))
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: _buildBossHpBar(),
@@ -46,6 +45,16 @@ class HudWidget extends StatelessWidget {
   }
 
   Widget _buildHpBar() {
+    if (!game.isLoaded) {
+      return Container(
+        width: 140,
+        height: 18,
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(9),
+        ),
+      );
+    }
     final hpPercent = game.player.hp / game.player.maxHp;
     final hpColor = hpPercent > 0.5
         ? Colors.green
@@ -88,6 +97,9 @@ class HudWidget extends StatelessWidget {
   }
 
   Widget _buildFloorInfo() {
+    if (!game.isLoaded) {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
@@ -118,6 +130,9 @@ class HudWidget extends StatelessWidget {
   }
 
   Widget _buildRoomInfo() {
+    if (!game.isLoaded) {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(

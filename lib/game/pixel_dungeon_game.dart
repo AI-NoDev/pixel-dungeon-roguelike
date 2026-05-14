@@ -27,7 +27,7 @@ class PixelDungeonGame extends FlameGame
 
   final GameState gameState = GameState();
   final InputSystem inputSystem = InputSystem();
-  late SkillSystem skillSystem;
+  late final SkillSystem skillSystem = SkillSystem(game: this);
 
   // Floor/Room tracking
   late FloorConfig currentFloorConfig;
@@ -84,7 +84,6 @@ class PixelDungeonGame extends FlameGame
 
     // Setup combat
     combatSystem = CombatSystem(game: this);
-    skillSystem = SkillSystem(game: this);
 
     camera.follow(player);
   }
@@ -173,6 +172,12 @@ class PixelDungeonGame extends FlameGame
 
     if (roomType == RoomType.boss) {
       return currentBoss?.isDead ?? false;
+    }
+
+    // For combat/elite rooms, require enemies to have been spawned at least once
+    if (roomType == RoomType.combat || roomType == RoomType.elite) {
+      if (currentRoom.enemies.isEmpty) return false; // Not yet spawned
+      return currentRoom.isCleared;
     }
 
     return currentRoom.isCleared;

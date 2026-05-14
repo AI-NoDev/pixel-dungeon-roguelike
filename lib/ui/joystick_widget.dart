@@ -111,25 +111,46 @@ class _JoystickPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(radius, radius);
 
-    // Base circle
+    // Outer ring (more visible)
+    final outerRingPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawCircle(center, radius, outerRingPaint);
+
+    // Base circle (filled)
     final basePaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius, basePaint);
+    canvas.drawCircle(center, radius - 3, basePaint);
 
-    // Base border
+    // Inner border
     final borderPaint = Paint()
-      ..color = knobColor.withValues(alpha: 0.3)
+      ..color = knobColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    canvas.drawCircle(center, radius, borderPaint);
+    canvas.drawCircle(center, radius - 3, borderPaint);
+
+    // Knob shadow
+    final knobCenter = center + knobPosition;
+    canvas.drawCircle(
+      knobCenter + const Offset(0, 2),
+      knobRadius,
+      Paint()..color = Colors.black.withValues(alpha: 0.3),
+    );
 
     // Knob
-    final knobCenter = center + knobPosition;
     final knobPaint = Paint()
-      ..color = isDragging ? knobColor : knobColor.withValues(alpha: 0.6)
+      ..color = isDragging ? knobColor : knobColor.withValues(alpha: 0.8)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(knobCenter, knobRadius, knobPaint);
+
+    // Knob highlight
+    canvas.drawCircle(
+      knobCenter - Offset(knobRadius * 0.3, knobRadius * 0.3),
+      knobRadius * 0.4,
+      Paint()..color = Colors.white.withValues(alpha: 0.4),
+    );
   }
 
   @override
