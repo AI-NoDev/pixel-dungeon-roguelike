@@ -30,20 +30,27 @@ class _MainMenuState extends State<MainMenu> {
         ),
       ),
       child: SafeArea(
-        child: Column(
+        child: Row(
           children: [
-            const SizedBox(height: 40),
-            // Title
-            _buildTitle(),
-            const SizedBox(height: 20),
-            // Stats
-            _buildStats(),
-            const SizedBox(height: 30),
-            // Hero selection
-            Expanded(child: _buildHeroSelection()),
-            // Start button
-            _buildStartButton(),
-            const SizedBox(height: 30),
+            // Left side: Title + Stats + Start button
+            Expanded(
+              flex: 2,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildTitle(),
+                  const SizedBox(height: 16),
+                  _buildStats(),
+                  const SizedBox(height: 24),
+                  _buildStartButton(),
+                ],
+              ),
+            ),
+            // Right side: Hero selection
+            Expanded(
+              flex: 3,
+              child: _buildHeroSelection(),
+            ),
           ],
         ),
       ),
@@ -119,16 +126,17 @@ class _MainMenuState extends State<MainMenu> {
 
   Widget _buildHeroSelection() {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
           'SELECT HERO',
           style: TextStyle(
             color: Colors.white70,
-            fontSize: 14,
+            fontSize: 12,
             letterSpacing: 2,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         Expanded(
           child: PageView.builder(
             itemCount: HeroData.all.length,
@@ -161,11 +169,12 @@ class _MainMenuState extends State<MainMenu> {
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Hero avatar
                     Container(
-                      width: 56,
-                      height: 56,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
                         color: isLocked
                             ? Colors.grey.shade800
@@ -173,15 +182,15 @@ class _MainMenuState extends State<MainMenu> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: isLocked
-                          ? const Icon(Icons.lock, color: Colors.white38, size: 28)
-                          : Icon(Icons.person, color: hero.color, size: 32),
+                          ? const Icon(Icons.lock, color: Colors.white38, size: 24)
+                          : Icon(Icons.person, color: hero.color, size: 28),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       hero.name,
                       style: TextStyle(
                         color: isLocked ? Colors.white38 : hero.color,
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -190,33 +199,35 @@ class _MainMenuState extends State<MainMenu> {
                       hero.description,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 10,
+                        fontSize: 9,
                       ),
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Stats
                     _heroStat('HP', hero.maxHp.toInt(), 200),
                     _heroStat('SPD', hero.speed.toInt(), 250),
                     _heroStat('DMG', hero.damage.toInt(), 50),
                     _heroStat('ATK', (hero.fireRate * 10).toInt(), 60),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     // Skill
                     Text(
                       hero.skill,
                       style: TextStyle(
                         color: hero.color.withValues(alpha: 0.8),
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     if (isLocked) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
                         'Unlock: ${hero.unlockCost} gold',
                         style: const TextStyle(
                           color: Colors.amber,
-                          fontSize: 10,
+                          fontSize: 9,
                         ),
                       ),
                     ],
