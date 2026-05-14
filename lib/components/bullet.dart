@@ -2,6 +2,7 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../data/weapons.dart';
 import 'player.dart';
 
 class Bullet extends PositionComponent
@@ -12,6 +13,8 @@ class Bullet extends PositionComponent
     required this.speed,
     required this.damage,
     required this.isPlayerBullet,
+    this.color = const Color(0xFFFFD54F),
+    this.element = ElementType.none,
   }) : super(
           position: position,
           size: Vector2(8, 8),
@@ -22,6 +25,8 @@ class Bullet extends PositionComponent
   final double speed;
   final double damage;
   final bool isPlayerBullet;
+  final Color color;
+  final ElementType element;
   double _lifetime = 0;
   static const double maxLifetime = 3.0;
 
@@ -29,13 +34,11 @@ class Bullet extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
 
-    final color = isPlayerBullet
-        ? const Color(0xFFFFD54F)
-        : const Color(0xFFEF5350);
+    final bulletColor = isPlayerBullet ? color : const Color(0xFFEF5350);
 
     add(CircleComponent(
       radius: 4,
-      paint: Paint()..color = color,
+      paint: Paint()..color = bulletColor,
     ));
 
     add(CircleHitbox(radius: 4));
@@ -47,7 +50,6 @@ class Bullet extends PositionComponent
     position += direction * speed * dt;
     _lifetime += dt;
 
-    // Remove if out of bounds or too old
     if (_lifetime > maxLifetime ||
         position.x < -50 || position.x > 850 ||
         position.y < -50 || position.y > 650) {
@@ -63,6 +65,5 @@ class Bullet extends PositionComponent
       other.takeDamage(damage);
       removeFromParent();
     }
-    // Player bullets hitting enemies is handled in Enemy class
   }
 }

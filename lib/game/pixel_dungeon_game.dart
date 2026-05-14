@@ -8,6 +8,8 @@ import '../components/enemy_spawner.dart';
 import '../systems/input_system.dart';
 import '../systems/combat_system.dart';
 import '../data/game_state.dart';
+import '../data/weapons.dart';
+import '../data/talents.dart';
 
 class PixelDungeonGame extends FlameGame
     with HasCollisionDetection, HasKeyboardHandlerComponents {
@@ -19,7 +21,15 @@ class PixelDungeonGame extends FlameGame
   final GameState gameState = GameState();
   final InputSystem inputSystem = InputSystem();
 
-  // Camera follows player
+  // UI state callbacks
+  VoidCallback? onShowTalentPicker;
+  VoidCallback? onShowWeaponPickup;
+  VoidCallback? onStateChanged;
+
+  // Pending rewards
+  List<TalentData>? pendingTalentChoices;
+  WeaponData? pendingWeapon;
+
   @override
   Color backgroundColor() => const Color(0xFF1a1a2e);
 
@@ -27,25 +37,19 @@ class PixelDungeonGame extends FlameGame
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Setup camera
     camera.viewfinder.anchor = Anchor.center;
 
-    // Create dungeon room
     currentRoom = DungeonRoom(roomSize: Vector2(800, 600));
     world.add(currentRoom);
 
-    // Create player at center of room
     player = Player(position: Vector2(400, 300));
     world.add(player);
 
-    // Setup enemy spawner
     enemySpawner = EnemySpawner(game: this);
     enemySpawner.spawnEnemiesForRoom(currentRoom);
 
-    // Setup combat system
     combatSystem = CombatSystem(game: this);
 
-    // Camera follows player
     camera.follow(player);
   }
 
@@ -58,25 +62,64 @@ class PixelDungeonGame extends FlameGame
     if (currentRoom.isCleared && !currentRoom.doorsOpen) {
       currentRoom.openDoors();
       gameState.roomsCleared++;
+      _onRoomCleared();
     }
+  }
+
+  void _onRoomCleared() {
+    // Every room cleared: offer talent
+    pendingTalentChoices = TalentPool.getRandomChoices();
+    onShowTalentPicker?.call();
+    pauseEngine();
+
+    // Every 2 rooms: also drop a weapon
+    if (gameState.roomsCleared % 2 == 0) {
+      pendingWeapon = WeaponPool.getRandomWeapon(floor: gameState.currentFloor);
+    }
+  }
+
+  void onTalentPicked() {
+    pendingTalentChoices = null;
+
+    // Show weapon pickup if available
+    if (pendingWeapon != null) {
+      onShowWeaponPickup?.call();
+    } else {
+      resumeEngine();
+      onStateChanged?.call();
+    }
+  }
+
+  void onWeaponAccepted() {
+    if (pendingWeapon != null) {
+      player.equipWeapon(pendingWeapon!);
+    }
+    pendingWeapon = null;
+    resumeEngine();
+    onStateChanged?.call();
+  }
+
+  void onWeaponDeclined() {
+    pendingWeapon = null;
+    resumeEngine();
+    onStateChanged?.call();
   }
 
   void moveToNextRoom() {
     gameState.currentFloor++;
-    // Remove old enemies
     world.children.whereType<Enemy>().forEach((e) => e.removeFromParent());
 
-    // Generate new room
     currentRoom.regenerate();
     player.position = Vector2(400, 300);
 
-    // Spawn new enemies (harder)
     enemySpawner.spawnEnemiesForRoom(currentRoom);
+    onStateChanged?.call();
   }
 
   void onPlayerDeath() {
     gameState.isGameOver = true;
     pauseEngine();
+    onStateChanged?.call();
   }
 
   void restartGame() {
@@ -84,5 +127,6 @@ class PixelDungeonGame extends FlameGame
     resumeEngine();
     player.reset();
     moveToNextRoom();
+    onStateChanged?.call();
   }
 }

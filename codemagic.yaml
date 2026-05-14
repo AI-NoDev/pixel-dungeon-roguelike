@@ -7,14 +7,10 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      groups:
-        - app_store_credentials
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.chronofrontline.pixelDungeon
     scripts:
-      - name: Set up local properties
-        script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
       - name: Get Flutter packages
         script: flutter packages pub get
       - name: Install CocoaPods dependencies
@@ -26,8 +22,7 @@ workflows:
         script: |
           flutter build ipa --release \
             --build-name=1.0.0 \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID") + 1)) \
-            --export-options-plist=/Users/builder/export_options.plist
+            --build-number=$PROJECT_BUILD_NUMBER
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
@@ -36,9 +31,9 @@ workflows:
         submit_to_testflight: true
         submit_to_app_store: false
 
-  ios-debug:
-    name: iOS Debug Build
-    max_build_duration: 30
+  default-workflow:
+    name: Default Workflow
+    max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: stable
@@ -49,11 +44,16 @@ workflows:
         script: flutter packages pub get
       - name: Flutter analyze
         script: flutter analyze --no-fatal-infos
-      - name: Flutter build (debug)
+      - name: Build iOS debug
         script: flutter build ios --debug --no-codesign
+      - name: Build Android debug
+        script: flutter build appbundle --debug
+    artifacts:
+      - build/ios/iphoneos/*.app
+      - build/app/outputs/**/*.aab
     triggering:
       events:
         - push
       branch_patterns:
-        - pattern: 'develop'
+        - pattern: 'main'
           include: true
