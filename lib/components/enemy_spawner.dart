@@ -4,7 +4,9 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../data/floor_config.dart';
+import '../data/weapons.dart';
 import '../systems/particle_system.dart';
+import '../systems/element_system.dart';
 import '../components/item_drop.dart';
 import 'bullet.dart';
 import 'dungeon_room.dart';
@@ -120,6 +122,10 @@ class Enemy extends PositionComponent
     super.onCollisionStart(intersectionPoints, other);
     if (other is Bullet && other.isPlayerBullet) {
       takeDamage(other.damage);
+      // Apply element
+      if (other.element != ElementType.none) {
+        ElementSystem.applyElement(game, this, other.element, other.damage);
+      }
       other.removeFromParent();
     }
   }
