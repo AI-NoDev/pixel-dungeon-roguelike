@@ -1,5 +1,6 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../data/weapons.dart';
@@ -17,7 +18,7 @@ class Bullet extends PositionComponent
     this.element = ElementType.none,
   }) : super(
           position: position,
-          size: Vector2(8, 8),
+          size: Vector2(16, 16),
           anchor: Anchor.center,
         );
 
@@ -34,14 +35,67 @@ class Bullet extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
 
-    final bulletColor = isPlayerBullet ? color : const Color(0xFFEF5350);
+    try {
+      // Choose sprite based on element / origin
+      final spriteName = _getSpriteName();
+      final image = await game.images.load('bullets/$spriteName.png');
+      final frameCount = image.width ~/ 8; // bullets are 8px wide
 
-    add(CircleComponent(
-      radius: 4,
-      paint: Paint()..color = bulletColor,
-    ));
+      if (frameCount > 1) {
+        // Animated bullet
+        final spriteSheet = SpriteSheet(
+          image: image,
+          srcSize: Vector2.all(8),
+        );
+        final anim = spriteSheet.createAnimation(
+          row: 0,
+          stepTime: 0.08,
+          to: frameCount,
+          loop: true,
+        );
+        add(SpriteAnimationComponent(
+          animation: anim,
+          size: Vector2.all(16),
+          anchor: Anchor.center,
+          position: Vector2.all(8),
+        ));
+      } else {
+        // Static bullet
+        final sprite = Sprite(image);
+        add(SpriteComponent(
+          sprite: sprite,
+          size: Vector2.all(16),
+          anchor: Anchor.center,
+          position: Vector2.all(8),
+        ));
+      }
+    } catch (_) {
+      // Fallback: colored circle
+      final bulletColor = isPlayerBullet ? color : const Color(0xFFEF5350);
+      add(CircleComponent(
+        radius: 4,
+        paint: Paint()..color = bulletColor,
+        position: Vector2.all(4),
+      ));
+    }
 
-    add(CircleHitbox(radius: 4));
+    add(CircleHitbox(radius: 4, position: Vector2.all(4)));
+  }
+
+  String _getSpriteName() {
+    if (!isPlayerBullet) return 'bullet_enemy';
+    switch (element) {
+      case ElementType.fire:
+        return 'bullet_fire';
+      case ElementType.ice:
+        return 'bullet_ice';
+      case ElementType.lightning:
+        return 'bullet_lightning';
+      case ElementType.poison:
+        return 'bullet_poison';
+      case ElementType.none:
+        return 'bullet_basic';
+    }
   }
 
   @override

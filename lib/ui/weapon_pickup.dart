@@ -42,12 +42,34 @@ class WeaponPickupDialog extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
+              // Weapon icon
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D0D1A),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: weapon.rarityColor, width: 1),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  'assets/images/weapons/weapon_${weapon.spriteId}.png',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.none,
+                  errorBuilder: (context, error, stack) => Icon(
+                    Icons.gps_fixed,
+                    color: weapon.color,
+                    size: 48,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
                 weapon.name,
                 style: TextStyle(
                   color: weapon.color,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),

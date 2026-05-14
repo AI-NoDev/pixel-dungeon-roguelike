@@ -19,6 +19,7 @@ class WeaponData {
   final double spread; // angle in radians
   final double range;
   final Color color;
+  final String spriteId;  // matches assets/images/weapons/weapon_<id>.png
 
   const WeaponData({
     required this.name,
@@ -32,6 +33,7 @@ class WeaponData {
     this.spread = 0,
     this.range = 3.0,
     required this.color,
+    required this.spriteId,
   });
 
   double get attackInterval => 1.0 / fireRate;
@@ -81,6 +83,7 @@ class WeaponPool {
       fireRate: 3,
       bulletSpeed: 320,
       color: Color(0xFFBDBDBD),
+      spriteId: 'iron_pistol',
     ),
     const WeaponData(
       name: 'Flame Pistol',
@@ -91,6 +94,7 @@ class WeaponPool {
       fireRate: 3,
       bulletSpeed: 320,
       color: Color(0xFFFF7043),
+      spriteId: 'flame_pistol',
     ),
     const WeaponData(
       name: 'Frost Revolver',
@@ -101,6 +105,7 @@ class WeaponPool {
       fireRate: 2.5,
       bulletSpeed: 300,
       color: Color(0xFF4FC3F7),
+      spriteId: 'frost_revolver',
     ),
 
     // === SHOTGUNS ===
@@ -115,6 +120,7 @@ class WeaponPool {
       spread: 0.4,
       range: 2.0,
       color: Color(0xFF8D6E63),
+      spriteId: 'rusty_shotgun',
     ),
     const WeaponData(
       name: 'Thunder Scatter',
@@ -128,6 +134,7 @@ class WeaponPool {
       spread: 0.35,
       range: 2.2,
       color: Color(0xFFFFEB3B),
+      spriteId: 'thunder_scatter',
     ),
     const WeaponData(
       name: 'Dragon Breath',
@@ -141,6 +148,7 @@ class WeaponPool {
       spread: 0.5,
       range: 1.8,
       color: Color(0xFFFF5722),
+      spriteId: 'dragon_breath',
     ),
 
     // === RIFLES ===
@@ -152,6 +160,7 @@ class WeaponPool {
       fireRate: 2,
       bulletSpeed: 400,
       color: Color(0xFF795548),
+      spriteId: 'hunter_rifle',
     ),
     const WeaponData(
       name: 'Poison Rifle',
@@ -162,6 +171,7 @@ class WeaponPool {
       fireRate: 2.2,
       bulletSpeed: 380,
       color: Color(0xFF9CCC65),
+      spriteId: 'poison_rifle',
     ),
 
     // === SMG ===
@@ -174,6 +184,7 @@ class WeaponPool {
       bulletSpeed: 350,
       spread: 0.15,
       color: Color(0xFF78909C),
+      spriteId: 'rapid_blaster',
     ),
     const WeaponData(
       name: 'Lightning SMG',
@@ -185,6 +196,7 @@ class WeaponPool {
       bulletSpeed: 380,
       spread: 0.12,
       color: Color(0xFF7C4DFF),
+      spriteId: 'lightning_smg',
     ),
     const WeaponData(
       name: 'Void Sprayer',
@@ -196,6 +208,7 @@ class WeaponPool {
       bulletSpeed: 360,
       spread: 0.1,
       color: Color(0xFF6A1B9A),
+      spriteId: 'void_sprayer',
     ),
 
     // === SNIPER ===
@@ -207,6 +220,7 @@ class WeaponPool {
       fireRate: 0.8,
       bulletSpeed: 500,
       color: Color(0xFF4E342E),
+      spriteId: 'long_bow',
     ),
     const WeaponData(
       name: 'Ice Piercer',
@@ -217,6 +231,7 @@ class WeaponPool {
       fireRate: 0.7,
       bulletSpeed: 550,
       color: Color(0xFF00BCD4),
+      spriteId: 'ice_piercer',
     ),
 
     // === MAGIC ===
@@ -228,6 +243,7 @@ class WeaponPool {
       fireRate: 1.5,
       bulletSpeed: 250,
       color: Color(0xFFE040FB),
+      spriteId: 'arcane_staff',
     ),
     const WeaponData(
       name: 'Inferno Wand',
@@ -238,6 +254,7 @@ class WeaponPool {
       fireRate: 1.8,
       bulletSpeed: 270,
       color: Color(0xFFFF6E40),
+      spriteId: 'inferno_wand',
     ),
     const WeaponData(
       name: 'Staff of Eternity',
@@ -250,6 +267,7 @@ class WeaponPool {
       bulletsPerShot: 3,
       spread: 0.2,
       color: Color(0xFFFFD700),
+      spriteId: 'staff_of_eternity',
     ),
   ];
 
