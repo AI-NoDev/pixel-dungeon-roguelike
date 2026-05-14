@@ -126,9 +126,6 @@ abstract class SlimeBase extends Enemy {
     }
   }
 
-  /// Track movement intent (set by enemy AI)
-  Vector2 moveDirection = Vector2.zero();
-
   void _setState(SlimeAnimState state) {
     if (_currentState == state || _animComponent == null) return;
     _currentState = state;

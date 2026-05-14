@@ -92,9 +92,21 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     // Movement
     if (moveDirection.length > 0) {
       final normalizedDir = moveDirection.normalized();
-      position += normalizedDir * speed * dt;
-      position.x = position.x.clamp(40, 760);
-      position.y = position.y.clamp(40, 560);
+      // Try to move; if the new position would land us inside a wall,
+      // slide along the unblocked axis instead.
+      final desired = position + normalizedDir * speed * dt;
+      if (!_collidesWithWall(desired)) {
+        position = desired;
+      } else {
+        // Try sliding along X only
+        final slideX = position + Vector2(normalizedDir.x * speed * dt, 0);
+        final slideY = position + Vector2(0, normalizedDir.y * speed * dt);
+        if (!_collidesWithWall(slideX)) {
+          position = slideX;
+        } else if (!_collidesWithWall(slideY)) {
+          position = slideY;
+        }
+      }
     }
 
     // Auto-aim while finger is on aim joystick but not dragged out
@@ -312,5 +324,10 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     if (other is Enemy) {
       takeDamage(other.contactDamage);
     }
+  }
+
+  /// True if [pos] would put the player inside a wall hitbox.
+  bool _collidesWithWall(Vector2 pos) {
+    return game.dungeonWorld.pointInWall(pos, radius: 12);
   }
 }

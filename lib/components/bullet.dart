@@ -110,10 +110,7 @@ class Bullet extends PositionComponent
     super.update(dt);
     position += direction * speed * dt;
     _lifetime += dt;
-
-    if (_lifetime > maxLifetime ||
-        position.x < -50 || position.x > 850 ||
-        position.y < -50 || position.y > 650) {
+    if (_lifetime > maxLifetime) {
       removeFromParent();
     }
   }

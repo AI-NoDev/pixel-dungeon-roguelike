@@ -43,6 +43,7 @@ class Enemy extends PositionComponent
 
   double _shootTimer = 0;
   bool isDead = false;
+  Vector2 moveDirection = Vector2.zero();
 
   late RectangleComponent body;
 
@@ -64,9 +65,15 @@ class Enemy extends PositionComponent
     if (isDead) return;
 
     final player = game.player;
-    final direction = (player.position - position);
-    if (direction.length > 40) {
-      position += direction.normalized() * speed * dt;
+    final toPlayer = player.position - position;
+    final dist = toPlayer.length;
+    if (dist > 40) {
+      // Steer around walls: if a wall is between us and the player on the
+      // direct vector, slide along it toward the nearest open direction.
+      moveDirection = _steeringDirection(toPlayer.normalized());
+      position += moveDirection * speed * dt;
+    } else {
+      moveDirection = Vector2.zero();
     }
 
     if (shootInterval > 0) {
@@ -76,9 +83,31 @@ class Enemy extends PositionComponent
         _shootTimer = 0;
       }
     }
+  }
 
-    position.x = position.x.clamp(30, 770);
-    position.y = position.y.clamp(30, 570);
+  /// Returns a movement direction that probes for walls ahead. If a wall
+  /// blocks the desired direction, try the player-direction with a small
+  /// angular offset (left/right) until a clear path is found.
+  Vector2 _steeringDirection(Vector2 desired) {
+    if (!_blocked(desired)) return desired;
+    // Try fanning ±15°, ±30°, ±60°, ±90°
+    for (final off in const [0.26, -0.26, 0.52, -0.52, 1.04, -1.04, 1.57, -1.57]) {
+      final c = cos(off);
+      final s = sin(off);
+      final candidate = Vector2(
+        desired.x * c - desired.y * s,
+        desired.x * s + desired.y * c,
+      );
+      if (!_blocked(candidate)) return candidate;
+    }
+    return desired;
+  }
+
+  /// Sample a point ahead of us; if it overlaps any wall, the direction is
+  /// considered blocked.
+  bool _blocked(Vector2 dir) {
+    final probe = position + dir * 28;
+    return game.dungeonWorld.pointInWall(probe, radius: 10);
   }
 
   void shoot() {

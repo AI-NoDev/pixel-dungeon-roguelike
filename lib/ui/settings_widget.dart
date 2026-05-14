@@ -94,10 +94,10 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               const SizedBox(height: 8),
               _buildSlider(
                 t.t('auto_aim_range'),
-                GamePreferences.autoAimRange / 400.0, // normalize to 0-1
+                GamePreferences.autoAimRange / 800.0, // normalize to 0-1
                 (val) {
                   setState(() {
-                    GamePreferences.setAutoAimRange(val * 400.0);
+                    GamePreferences.setAutoAimRange((val * 800.0).clamp(120.0, 800.0));
                   });
                 },
               ),
