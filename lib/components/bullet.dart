@@ -16,6 +16,7 @@ class Bullet extends PositionComponent
     required this.isPlayerBullet,
     this.color = const Color(0xFFFFD54F),
     this.element = ElementType.none,
+    this.isCritical = false,
   }) : super(
           position: position,
           size: Vector2(16, 16),
@@ -28,6 +29,7 @@ class Bullet extends PositionComponent
   final bool isPlayerBullet;
   final Color color;
   final ElementType element;
+  final bool isCritical;
   double _lifetime = 0;
   static const double maxLifetime = 3.0;
 

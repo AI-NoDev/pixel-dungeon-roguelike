@@ -148,14 +148,15 @@ abstract class SlimeBase extends Enemy {
   }
 
   @override
-  void takeDamage(double damage) {
+  void takeDamage(double damage, {bool isCritical = false}) {
     if (isDead) return;
     hp -= damage;
 
-    // Show floating damage number (don't call super, body has been replaced)
+    // Show floating damage number
     game.world.add(FloatingText.damage(
       position + Vector2(0, -8),
       damage,
+      isCritical: isCritical,
     ));
 
     // Trigger hurt animation state

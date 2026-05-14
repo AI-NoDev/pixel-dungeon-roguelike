@@ -31,6 +31,7 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   double damageMultiplier = 1.0;
   double fireRateMultiplier = 1.0;
   double speedMultiplier = 1.0;
+  double critChance = 0.10;  // 10% base critical hit chance
   double bulletSpeedMultiplier = 1.0;
   int extraBullets = 0;
   double spreadReduction = 0;
@@ -143,6 +144,10 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
 
     final baseAngle = atan2(aimDirection.y, aimDirection.x);
 
+    // Roll critical hit per shot (10% base chance, can be modified by talents later)
+    final isCritical = Random().nextDouble() < critChance;
+    final critMultiplier = isCritical ? 2.0 : 1.0;
+
     for (int i = 0; i < bulletsPerShot; i++) {
       double angle = baseAngle;
 
@@ -159,10 +164,11 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
         position: bulletPos,
         direction: bulletDir,
         speed: bulletSpeed,
-        damage: attackDamage,
+        damage: attackDamage * critMultiplier,
         isPlayerBullet: true,
         color: currentWeapon?.color ?? const Color(0xFFFFD54F),
         element: currentWeapon?.element ?? ElementType.none,
+        isCritical: isCritical,
       );
 
       game.world.add(bullet);

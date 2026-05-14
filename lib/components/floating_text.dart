@@ -83,20 +83,21 @@ class FloatingText extends TextComponent {
 
   // Convenience constructors
 
-  /// Damage to enemies (white-yellow text)
+  /// Damage to enemies (orange-yellow text, red bigger for crit)
   factory FloatingText.damage(
     Vector2 position,
     double damage, {
     bool isCritical = false,
   }) {
     return FloatingText(
-      text: '-${damage.toInt()}',
+      text: isCritical ? '-${damage.toInt()}!' : '-${damage.toInt()}',
       position: position,
       color: isCritical
-          ? const Color(0xFFFFEB3B)
-          : const Color(0xFFFFFFFF),
-      fontSize: isCritical ? 18 : 14,
-      duration: 0.8,
+          ? const Color(0xFFFF1744)  // bright red for crits
+          : const Color(0xFFFFA726), // warm orange for normal
+      fontSize: isCritical ? 22 : 14,
+      duration: isCritical ? 1.0 : 0.7,
+      driftDistance: isCritical ? 36 : 26,
     );
   }
 

@@ -62,15 +62,15 @@ class _GameOverlayState extends State<GameOverlay> {
     return SafeArea(
       child: Stack(
         children: [
-          // HUD - always visible
+          // HUD - leave space on right for pause button
           Positioned(
             top: 16,
             left: 16,
-            right: 16,
+            right: 60,
             child: HudWidget(game: widget.game),
           ),
 
-          // Pause button
+          // Pause button (top right corner)
           Positioned(
             top: 16,
             right: 16,

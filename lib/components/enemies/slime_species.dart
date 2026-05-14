@@ -167,8 +167,8 @@ class CrystallineSlime extends SlimeBase {
         );
 
   @override
-  void takeDamage(double damage) {
-    super.takeDamage(damage * 0.7); // 30% physical damage reduction
+  void takeDamage(double damage, {bool isCritical = false}) {
+    super.takeDamage(damage * 0.7, isCritical: isCritical); // 30% physical damage reduction
   }
 }
 
@@ -315,8 +315,8 @@ class SlimeKnight extends SlimeBase {
         );
 
   @override
-  void takeDamage(double damage) {
-    super.takeDamage(damage * 0.5); // Armor reduces damage 50%
+  void takeDamage(double damage, {bool isCritical = false}) {
+    super.takeDamage(damage * 0.5, isCritical: isCritical); // Armor reduces damage 50%
   }
 
   @override

@@ -93,7 +93,7 @@ class Enemy extends PositionComponent
     game.world.add(bullet);
   }
 
-  void takeDamage(double damage) {
+  void takeDamage(double damage, {bool isCritical = false}) {
     if (isDead) return;
     hp -= damage;
 
@@ -101,6 +101,7 @@ class Enemy extends PositionComponent
     game.world.add(FloatingText.damage(
       position + Vector2(0, -8),
       damage,
+      isCritical: isCritical,
     ));
 
     body.paint.color = Colors.white;
@@ -135,7 +136,7 @@ class Enemy extends PositionComponent
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
     if (other is Bullet && other.isPlayerBullet) {
-      takeDamage(other.damage);
+      takeDamage(other.damage, isCritical: other.isCritical);
       // Apply element
       if (other.element != ElementType.none) {
         ElementSystem.applyElement(game, this, other.element, other.damage);
