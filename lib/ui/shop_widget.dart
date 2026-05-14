@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/items.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../i18n/app_localizations.dart';
 
 class ShopWidget extends StatefulWidget {
   final PixelDungeonGame game;
@@ -24,6 +25,7 @@ class _ShopWidgetState extends State<ShopWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       color: Colors.black87,
       child: Center(
@@ -38,9 +40,9 @@ class _ShopWidgetState extends State<ShopWidget> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'SHOP',
-                style: TextStyle(
+              Text(
+                t.t('shop'),
+                style: const TextStyle(
                   color: Colors.amber,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -68,7 +70,7 @@ class _ShopWidgetState extends State<ShopWidget> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                 ),
-                child: const Text('Leave Shop', style: TextStyle(color: Colors.white70)),
+                child: Text(t.t('leave_shop'), style: const TextStyle(color: Colors.white70)),
               ),
             ],
           ),
@@ -133,7 +135,7 @@ class _ShopWidgetState extends State<ShopWidget> {
           ),
           // Buy button
           if (isPurchased)
-            const Text('SOLD', style: TextStyle(color: Colors.green, fontSize: 12))
+            Text(AppLocalizations.of(context).t('sold'), style: const TextStyle(color: Colors.green, fontSize: 12))
           else
             GestureDetector(
               onTap: canAfford ? () => _buyItem(index) : null,

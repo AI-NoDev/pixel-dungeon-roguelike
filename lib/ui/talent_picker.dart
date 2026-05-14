@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/talents.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../i18n/app_localizations.dart';
 
 class TalentPicker extends StatelessWidget {
   final PixelDungeonGame game;
@@ -16,24 +17,25 @@ class TalentPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       color: Colors.black87,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'LEVEL UP!',
-              style: TextStyle(
+            Text(
+              t.t('level_up'),
+              style: const TextStyle(
                 color: Colors.amber,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Choose a talent',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+            Text(
+              t.t('choose_talent'),
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
             const SizedBox(height: 24),
             Row(

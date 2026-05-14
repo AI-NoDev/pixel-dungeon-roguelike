@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../i18n/app_localizations.dart';
 import 'joystick_widget.dart';
 import 'hud_widget.dart';
 import 'talent_picker.dart';
@@ -139,7 +140,7 @@ class _GameOverlayState extends State<GameOverlay> {
                     child: ElevatedButton.icon(
                       onPressed: () => widget.game.moveToNextRoom(),
                       icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('Next Room'),
+                      label: Text(AppLocalizations.of(context).t('next_room')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade700,
                         foregroundColor: Colors.white,
@@ -220,17 +221,18 @@ class _GameOverlayState extends State<GameOverlay> {
 
   void _showPauseMenu() {
     widget.game.pauseEngine();
+    final t = AppLocalizations.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1a1a2e),
-        title: const Text('Paused', style: TextStyle(color: Colors.white)),
+        title: Text(t.t('paused'), style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Floor ${widget.game.gameState.currentFloor}',
+              '${t.t('floor')} ${widget.game.gameState.currentFloor}',
               style: const TextStyle(color: Colors.white70),
             ),
           ],
@@ -241,14 +243,14 @@ class _GameOverlayState extends State<GameOverlay> {
               Navigator.pop(ctx);
               widget.game.resumeEngine();
             },
-            child: const Text('Resume'),
+            child: Text(t.t('resume')),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               widget.onReturnToMenu();
             },
-            child: const Text('Quit', style: TextStyle(color: Colors.red)),
+            child: Text(t.t('quit'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -256,6 +258,7 @@ class _GameOverlayState extends State<GameOverlay> {
   }
 
   Widget _buildGameOverOverlay() {
+    final t = AppLocalizations.of(context);
     return Container(
       color: Colors.black54,
       child: Center(
@@ -269,19 +272,19 @@ class _GameOverlayState extends State<GameOverlay> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'GAME OVER',
-                style: TextStyle(
+              Text(
+                t.t('game_over'),
+                style: const TextStyle(
                   color: Colors.redAccent,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 16),
-              _resultRow('Floor Reached', '${widget.game.gameState.currentFloor}'),
-              _resultRow('Rooms Cleared', '${widget.game.gameState.roomsCleared}'),
-              _resultRow('Enemies Killed', '${widget.game.gameState.enemiesKilled}'),
-              _resultRow('Gold Earned', '${widget.game.gameState.gold}'),
+              _resultRow(t.t('floor_reached'), '${widget.game.gameState.currentFloor}'),
+              _resultRow(t.t('rooms_cleared'), '${widget.game.gameState.roomsCleared}'),
+              _resultRow(t.t('enemies_killed'), '${widget.game.gameState.enemiesKilled}'),
+              _resultRow(t.t('gold_earned'), '${widget.game.gameState.gold}'),
               const SizedBox(height: 24),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -295,7 +298,7 @@ class _GameOverlayState extends State<GameOverlay> {
                       backgroundColor: Colors.deepPurple,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                     ),
-                    child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                    child: Text(t.t('retry'), style: const TextStyle(color: Colors.white)),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
@@ -304,7 +307,7 @@ class _GameOverlayState extends State<GameOverlay> {
                       backgroundColor: Colors.grey.shade800,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                     ),
-                    child: const Text('Menu', style: TextStyle(color: Colors.white70)),
+                    child: Text(t.t('menu'), style: const TextStyle(color: Colors.white70)),
                   ),
                 ],
               ),

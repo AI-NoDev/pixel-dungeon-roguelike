@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/weapons.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../i18n/app_localizations.dart';
 
 class WeaponPickupDialog extends StatelessWidget {
   final PixelDungeonGame game;
@@ -18,6 +19,7 @@ class WeaponPickupDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       color: Colors.black54,
       child: Center(
@@ -50,11 +52,11 @@ class WeaponPickupDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              _buildStatRow('Damage', '${weapon.damage.toInt()}'),
-              _buildStatRow('Fire Rate', '${weapon.fireRate.toStringAsFixed(1)}/s'),
-              _buildStatRow('Bullets', '${weapon.bulletsPerShot}'),
+              _buildStatRow(t.t('damage'), '${weapon.damage.toInt()}'),
+              _buildStatRow(t.t('fire_rate'), '${weapon.fireRate.toStringAsFixed(1)}/s'),
+              _buildStatRow(t.t('bullets'), '${weapon.bulletsPerShot}'),
               if (weapon.element != ElementType.none)
-                _buildStatRow('Element', weapon.element.name.toUpperCase()),
+                _buildStatRow(t.t('element'), weapon.element.name.toUpperCase()),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -64,14 +66,14 @@ class WeaponPickupDialog extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey.shade800,
                     ),
-                    child: const Text('Skip', style: TextStyle(color: Colors.white70)),
+                    child: Text(t.t('skip'), style: const TextStyle(color: Colors.white70)),
                   ),
                   ElevatedButton(
                     onPressed: onAccept,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: weapon.rarityColor.withValues(alpha: 0.8),
                     ),
-                    child: const Text('Equip', style: TextStyle(color: Colors.white)),
+                    child: Text(t.t('equip'), style: const TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
