@@ -16,6 +16,7 @@
 | [08-roadmap.md](./08-roadmap.md) | 开发路线图（M1-M5）|
 | [09-monetization.md](./09-monetization.md) | 商业化方案 |
 | [10-release-checklist.md](./10-release-checklist.md) | 上架检查清单 |
+| [11-ai-art-prompts.md](./11-ai-art-prompts.md) | AI 美术生成 Prompts |
 
 ## 当前状态
 
