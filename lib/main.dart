@@ -6,14 +6,17 @@ import 'ui/game_overlay.dart';
 import 'ui/main_menu.dart';
 import 'data/game_state.dart';
 import 'data/heroes.dart';
+import 'systems/save_system.dart';
+import 'systems/audio_system.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await AudioSystem.init();
 
   runApp(const PixelDungeonApp());
 }
@@ -46,6 +49,18 @@ class _GameRootState extends State<GameRoot> {
   AppScreen _currentScreen = AppScreen.menu;
   final GameState _persistentState = GameState();
   PixelDungeonGame? _game;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSaveData();
+  }
+
+  Future<void> _loadSaveData() async {
+    await SaveSystem.loadPersistentData(_persistentState);
+    setState(() => _loaded = true);
+  }
 
   void _startGame(HeroData hero) {
     final game = PixelDungeonGame();
@@ -59,6 +74,12 @@ class _GameRootState extends State<GameRoot> {
         if (game.gameState.currentFloor > _persistentState.bestFloor) {
           _persistentState.bestFloor = game.gameState.currentFloor;
         }
+        SaveSystem.savePersistentData(_persistentState);
+        SaveSystem.saveHighScore(
+          game.gameState.currentFloor,
+          game.gameState.enemiesKilled,
+          game.gameState.gold,
+        );
       }
     };
 
@@ -78,6 +99,12 @@ class _GameRootState extends State<GameRoot> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_loaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     switch (_currentScreen) {
       case AppScreen.menu:
         return MainMenu(
