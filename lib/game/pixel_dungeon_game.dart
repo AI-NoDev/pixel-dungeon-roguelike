@@ -182,6 +182,8 @@ class PixelDungeonGame extends FlameGame
     if (!room.visited) {
       room.visited = true;
       _triggerRoomEncounter(room);
+      // Play door sound
+      AudioSystem.playDoorOpen();
     }
   }
 
@@ -215,6 +217,10 @@ class PixelDungeonGame extends FlameGame
     room.cleared = true;
     gameState.roomsCleared++;
     onStateChanged?.call();
+
+    // Celebration: brief screen flash + sound
+    shake(3, 0.15);
+    AudioSystem.playLevelUp();
 
     // Drop a talent pickup as reward for combat/elite rooms
     if (room.type == RoomType.combat || room.type == RoomType.elite) {
