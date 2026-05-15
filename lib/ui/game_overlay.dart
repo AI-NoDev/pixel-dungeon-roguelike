@@ -4,6 +4,7 @@ import '../game/pixel_dungeon_game.dart';
 import '../components/pickup_base.dart';
 import '../components/enemy_spawner.dart';
 import '../data/dungeon_map.dart';
+import '../data/floor_config.dart';
 import '../i18n/app_localizations.dart';
 import 'joystick_widget.dart';
 import 'hud_widget.dart';
