@@ -27,13 +27,12 @@ class GreenSlime extends SlimeBase {
     if (!canSplit) return;
     // 30% chance to split into 2 mini slimes
     if (DateTime.now().millisecondsSinceEpoch % 100 < 30) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        for (int i = 0; i < 2; i++) {
-          final dx = (i == 0 ? -10.0 : 10.0);
-          final mini = MiniSlime(position: position + Vector2(dx, 0));
-          game.world.add(mini);
-        }
-      });
+      // Spawn immediately (before removeFromParent in base class)
+      for (int i = 0; i < 2; i++) {
+        final dx = (i == 0 ? -10.0 : 10.0);
+        final mini = MiniSlime(position: position + Vector2(dx, 0));
+        game.world.add(mini);
+      }
     }
   }
 }
@@ -141,13 +140,9 @@ class MegaGoo extends SlimeBase {
 
   @override
   void onSlimeDeath() {
-    // Split into 2 Green Slimes
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (!isMounted) {
-        game.world.add(GreenSlime(position: position + Vector2(-20, 0), canSplit: false));
-        game.world.add(GreenSlime(position: position + Vector2(20, 0), canSplit: false));
-      }
-    });
+    // Split into 2 Green Slimes immediately
+    game.world.add(GreenSlime(position: position + Vector2(-20, 0), canSplit: false));
+    game.world.add(GreenSlime(position: position + Vector2(20, 0), canSplit: false));
   }
 }
 
@@ -308,11 +303,14 @@ class MagneticSlime extends SlimeBase {
   void update(double dt) {
     super.update(dt);
     if (isDead) return;
-    // Pull player slightly
+    // Pull player slightly (but respect wall collisions)
     final dist = position.distanceTo(game.player.position);
     if (dist < 80 && dist > 20) {
       final dir = (position - game.player.position).normalized();
-      game.player.position += dir * 20 * dt;
+      final newPos = game.player.position + dir * 20 * dt;
+      if (!game.dungeonWorld.pointInWall(newPos, radius: 12)) {
+        game.player.position = newPos;
+      }
     }
   }
 }
@@ -357,13 +355,9 @@ class SlimeKnight extends SlimeBase {
 
   @override
   void onSlimeDeath() {
-    // Summon 2 Mega Goos
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!isMounted) {
-        game.world.add(MegaGoo(position: position + Vector2(-25, 0)));
-        game.world.add(MegaGoo(position: position + Vector2(25, 0)));
-      }
-    });
+    // Summon 2 Mega Goos immediately
+    game.world.add(MegaGoo(position: position + Vector2(-25, 0)));
+    game.world.add(MegaGoo(position: position + Vector2(25, 0)));
   }
 }
 class SlimeMage extends SlimeBase {

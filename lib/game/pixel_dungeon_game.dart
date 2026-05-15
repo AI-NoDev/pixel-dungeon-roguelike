@@ -39,6 +39,7 @@ class PixelDungeonGame extends FlameGame
   // Camera shake
   double _shakeIntensity = 0;
   double _shakeTimer = 0;
+  final math.Random _shakeRng = math.Random();
 
   /// Trigger camera shake. [intensity] in pixels, [duration] seconds.
   void shake(double intensity, double duration) {
@@ -159,10 +160,9 @@ class PixelDungeonGame extends FlameGame
       _shakeTimer -= dt;
       final pct = (_shakeTimer / 0.3).clamp(0.0, 1.0);
       final amp = _shakeIntensity * pct;
-      final r = math.Random();
       camera.viewfinder.position += Vector2(
-        (r.nextDouble() - 0.5) * amp,
-        (r.nextDouble() - 0.5) * amp,
+        (_shakeRng.nextDouble() - 0.5) * amp,
+        (_shakeRng.nextDouble() - 0.5) * amp,
       );
       if (_shakeTimer <= 0) {
         _shakeIntensity = 0;
@@ -300,6 +300,7 @@ class PixelDungeonGame extends FlameGame
 
   void moveToNextFloor() {
     gameState.currentFloor++;
+    enemySpawner.disposeAll();
     _cleanupAll();
     _initFloor();
     onFloorComplete?.call();
@@ -307,12 +308,19 @@ class PixelDungeonGame extends FlameGame
   }
 
   void _cleanupAll() {
-    world.children.whereType<Enemy>().forEach((e) => e.removeFromParent());
-    world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
-    world.children.whereType<Decal>().forEach((d) => d.removeFromParent());
+    // Remove ALL game-world children except the dungeon structure itself.
+    // This prevents stale Future.delayed callbacks from spawning into the
+    // new floor.
+    final toRemove = <Component>[];
+    for (final c in world.children) {
+      if (c != dungeonWorld && c != fogOfWar && c != player) {
+        toRemove.add(c);
+      }
+    }
+    for (final c in toRemove) {
+      c.removeFromParent();
+    }
     DecalManager.clearAll();
-    world.children.whereType<TalentPickup>().forEach((t) => t.removeFromParent());
-    world.children.whereType<WeaponPickupDrop>().forEach((w) => w.removeFromParent());
     currentBoss?.removeFromParent();
     currentBoss = null;
     dungeonWorld.removeFromParent();
@@ -328,6 +336,7 @@ class PixelDungeonGame extends FlameGame
 
   void restartGame() {
     gameState.reset();
+    enemySpawner.disposeAll();
     _cleanupAll();
     _initFloor();
     resumeEngine();

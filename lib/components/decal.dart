@@ -116,10 +116,10 @@ class Decal extends PositionComponent {
     _paint.color = color.withValues(alpha: alpha * 0.5);
     // Main body
     c.drawCircle(Offset(cx, cy), size_ * 0.35, _paint);
-    // Blobs around
+    // Blobs around (pre-computed positions, fixed radius)
     _paint.color = color.withValues(alpha: alpha * 0.4);
     for (final p in _splatPoints) {
-      c.drawCircle(Offset(cx + p.dx, cy + p.dy), 2 + _random.nextDouble(), _paint);
+      c.drawCircle(Offset(cx + p.dx, cy + p.dy), 2.5, _paint);
     }
     // Highlight
     _paint.color = Colors.white.withValues(alpha: alpha * 0.3);

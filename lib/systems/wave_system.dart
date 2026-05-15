@@ -18,6 +18,7 @@ class WaveSystem {
   int totalWaves = 2;
   bool _waveActive = false;
   int _pendingSpawns = 0;
+  bool _disposed = false;
   final List<Enemy> _liveEnemies = [];
   final Random _random = Random();
 
@@ -26,12 +27,20 @@ class WaveSystem {
     totalWaves = waveCount;
     _waveActive = false;
     _pendingSpawns = 0;
+    _disposed = false;
     _liveEnemies.clear();
     _spawnNextWave(spawner);
   }
 
+  /// Mark this wave system as disposed (floor changed). Prevents stale
+  /// Future.delayed callbacks from firing.
+  void dispose() {
+    _disposed = true;
+    _liveEnemies.clear();
+  }
+
   void update(EnemySpawner spawner) {
-    if (!_waveActive) return;
+    if (!_waveActive || _disposed) return;
     // Remove dead/removed enemies from tracking
     _liveEnemies.removeWhere((e) => e.isDead || e.isRemoved);
     // Wait for both pending markers and live enemies to finish before advancing
@@ -39,11 +48,11 @@ class WaveSystem {
       _waveActive = false;
       if (currentWave < totalWaves) {
         Future.delayed(const Duration(milliseconds: 800), () {
-          _spawnNextWave(spawner);
+          if (!_disposed) _spawnNextWave(spawner);
         });
       } else {
         // All waves cleared — notify game
-        game.onRoomCleared(room);
+        if (!_disposed) game.onRoomCleared(room);
       }
     }
   }
@@ -105,6 +114,7 @@ class WaveSystem {
   }
 
   void _spawnEnemyWithAnim(EnemySpawner spawner, Vector2 pos, SpawnAnimType type) {
+    if (_disposed) return;
     final config = game.currentFloorConfig;
     final enemy = spawner.createEnemyForWave(pos, config);
     game.world.add(SpawnAnimation(

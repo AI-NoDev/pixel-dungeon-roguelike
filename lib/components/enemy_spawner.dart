@@ -404,6 +404,14 @@ class EnemySpawner {
     });
   }
 
+  /// Dispose all active waves (called on floor change).
+  void disposeAll() {
+    for (final wave in _activeWaves.values) {
+      wave.dispose();
+    }
+    _activeWaves.clear();
+  }
+
   /// Whether the room with given id has finished all waves.
   bool isRoomCleared(int roomId) {
     final wave = _activeWaves[roomId];

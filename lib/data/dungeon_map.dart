@@ -126,6 +126,50 @@ class DungeonMap {
       }
     }
 
+    // CONNECTIVITY CHECK: ensure all rooms are reachable from start (room 0).
+    // If any room is disconnected, add a corridor to connect it.
+    final visited = <int>{0};
+    final queue = <int>[0];
+    while (queue.isNotEmpty) {
+      final current = queue.removeAt(0);
+      for (final c in corridors) {
+        final neighbor = c.roomA == current ? c.roomB : (c.roomB == current ? c.roomA : -1);
+        if (neighbor >= 0 && !visited.contains(neighbor)) {
+          visited.add(neighbor);
+          queue.add(neighbor);
+        }
+      }
+    }
+    // Connect any unreachable rooms to their nearest reachable neighbor.
+    for (final room in rooms) {
+      if (visited.contains(room.id)) continue;
+      // Find nearest reachable room on the grid
+      RoomNode? nearest;
+      for (final r in rooms) {
+        if (!visited.contains(r.id)) continue;
+        if ((r.gridX - room.gridX).abs() + (r.gridY - room.gridY).abs() == 1) {
+          nearest = r;
+          break;
+        }
+      }
+      if (nearest != null) {
+        corridors.add(Corridor(roomA: room.id, roomB: nearest.id));
+        visited.add(room.id);
+        queue.add(room.id);
+        // Re-run BFS from this newly connected room
+        while (queue.isNotEmpty) {
+          final current = queue.removeAt(0);
+          for (final c in corridors) {
+            final neighbor = c.roomA == current ? c.roomB : (c.roomB == current ? c.roomA : -1);
+            if (neighbor >= 0 && !visited.contains(neighbor)) {
+              visited.add(neighbor);
+              queue.add(neighbor);
+            }
+          }
+        }
+      }
+    }
+
     // Find boss room id
     final bossRoom = rooms.lastWhere(
       (r) => r.type == RoomType.boss,
