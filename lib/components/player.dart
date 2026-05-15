@@ -14,6 +14,7 @@ import 'floating_text.dart';
 import 'aura_effect.dart';
 import 'decal.dart';
 import 'muzzle_flash.dart';
+import 'melee_swing.dart';
 import '../systems/audio_system.dart';
 
 class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, CollisionCallbacks {
@@ -271,16 +272,62 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
     final w = activeWeapon;
     final baseAngle = atan2(aimDirection.y, aimDirection.x);
 
-    // Roll critical hit per shot (10% base chance, can be modified by talents later)
+    // Roll critical hit per shot
     final isCritical = Random().nextDouble() < critChance;
     final critMultiplier = isCritical ? 2.0 : 1.0;
 
+    if (w.isMelee) {
+      _meleeAttack(w, baseAngle, isCritical, critMultiplier);
+    } else {
+      _rangedAttack(w, baseAngle, isCritical, critMultiplier);
+    }
+
+    // Consume ammo if firing the secondary
+    if (secondaryWeapon != null && secondaryWeapon == w && secondaryAmmo > 0) {
+      secondaryAmmo--;
+      if (secondaryAmmo <= 0) {
+        secondaryWeapon = null;
+        secondaryAmmo = 0;
+        _refreshWeaponSprite();
+        game.world.add(FloatingText.buff(
+          position + Vector2(0, -20),
+          'OUT OF AMMO',
+        ));
+        game.onStateChanged?.call();
+      } else {
+        game.onStateChanged?.call();
+      }
+    }
+  }
+
+  /// Melee attack: swing the weapon in an arc, damage enemies in range.
+  void _meleeAttack(WeaponData w, double angle, bool isCritical, double critMult) {
+    game.world.add(MeleeSwing(
+      position: position.clone(),
+      aimAngle: angle,
+      weapon: w,
+      damage: attackDamage * critMult,
+      isCritical: isCritical,
+    ));
+
+    // Weapon visual: quick rotation animation (swing).
+    _animateWeaponSwing(angle);
+
+    // Screen shake on heavy melee
+    if (w.type == WeaponType.hammer || w.type == WeaponType.axe) {
+      game.shake(5, 0.2);
+    } else if (isCritical) {
+      game.shake(3, 0.12);
+    }
+  }
+
+  /// Ranged attack: fire bullets.
+  void _rangedAttack(WeaponData w, double baseAngle, bool isCritical, double critMult) {
     final shotsThis = bulletsPerShot;
     for (int i = 0; i < shotsThis; i++) {
       double angle = baseAngle;
 
       if (shotsThis > 1) {
-        // Spread bullets evenly
         final totalSpread = spread > 0 ? spread : 0.3;
         angle = baseAngle - totalSpread / 2 + (totalSpread / (shotsThis - 1)) * i;
       }
@@ -292,7 +339,7 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
         position: bulletPos,
         direction: bulletDir,
         speed: bulletSpeed,
-        damage: attackDamage * critMultiplier,
+        damage: attackDamage * critMult,
         isPlayerBullet: true,
         color: w.color,
         element: w.element,
@@ -308,38 +355,34 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
       position: muzzlePos,
       angle: baseAngle,
       color: w.color,
-      size_: shotsThis > 1 ? 24 : 18,
+      size_: bulletsPerShot > 1 ? 24 : 18,
     ));
 
     // SFX based on weapon type
     AudioSystem.playShoot(_audioStyleFor(w));
 
     // Subtle screen shake on heavy weapons
-    if (w.type.toString().contains('rocket') ||
-        w.type.toString().contains('sniper')) {
+    if (w.type == WeaponType.rocket || w.type == WeaponType.sniper) {
       game.shake(4, 0.18);
     } else if (isCritical) {
       game.shake(2, 0.1);
     }
+  }
 
-    // Consume ammo if firing the secondary
-    if (secondaryWeapon != null && secondaryWeapon == w && secondaryAmmo > 0) {
-      secondaryAmmo--;
-      if (secondaryAmmo <= 0) {
-        // Out of ammo — auto-fall back to primary, drop secondary slot.
-        secondaryWeapon = null;
-        secondaryAmmo = 0;
-        _refreshWeaponSprite();
-        game.world.add(FloatingText.buff(
-          position + Vector2(0, -20),
-          'OUT OF AMMO',
-        ));
-        game.onStateChanged?.call();
-      } else {
-        // Notify HUD on every shot so ammo counter updates.
-        game.onStateChanged?.call();
-      }
-    }
+  /// Quick weapon rotation animation for melee swing.
+  void _animateWeaponSwing(double angle) {
+    // Rotate weapon sprite forward then back over ~0.15s.
+    final target = _weaponSprite ?? _weaponFallback;
+    if (target == null) return;
+    final startAngle = angle;
+    final swingAngle = 1.2; // radians forward
+    target.angle = startAngle + swingAngle;
+    Future.delayed(const Duration(milliseconds: 80), () {
+      if (target.isMounted) target.angle = startAngle + swingAngle * 0.5;
+    });
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (target.isMounted) target.angle = startAngle;
+    });
   }
 
   String _audioStyleFor(WeaponData w) {

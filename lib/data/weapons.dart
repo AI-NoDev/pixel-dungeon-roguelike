@@ -15,6 +15,11 @@ enum WeaponType {
   knife,      // 飞刀 - 高速旋转
   bow,        // 弓箭 - 高暴击
   crossbow,   // 弩 - 强穿透
+  // === MELEE ===
+  sword,      // 剑 - 中距离弧形挥砍
+  axe,        // 斧 - 短距离高伤害
+  spear,      // 矛 - 长距离直刺
+  hammer,     // 锤 - 短距离AoE
 }
 
 enum ElementType { none, fire, ice, lightning, poison, holy, dark }
@@ -51,6 +56,42 @@ class WeaponData {
   });
 
   double get attackInterval => 1.0 / fireRate;
+
+  /// True for melee weapons (sword/axe/spear/hammer). These don't fire
+  /// bullets — they swing in an arc and damage enemies within range.
+  bool get isMelee {
+    switch (type) {
+      case WeaponType.sword:
+      case WeaponType.axe:
+      case WeaponType.spear:
+      case WeaponType.hammer:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /// Melee attack range in pixels (only relevant for melee weapons).
+  double get meleeRange {
+    switch (type) {
+      case WeaponType.spear: return 80;
+      case WeaponType.sword: return 60;
+      case WeaponType.axe: return 45;
+      case WeaponType.hammer: return 50;
+      default: return 50;
+    }
+  }
+
+  /// Melee arc angle in radians (how wide the swing hits).
+  double get meleeArc {
+    switch (type) {
+      case WeaponType.hammer: return 2.0;  // wide AoE
+      case WeaponType.axe: return 1.2;
+      case WeaponType.sword: return 1.0;
+      case WeaponType.spear: return 0.5;   // narrow thrust
+      default: return 1.0;
+    }
+  }
 
   Color get rarityColor {
     switch (rarity) {
@@ -407,6 +448,118 @@ class WeaponPool {
       bulletSpeed: 700,
       color: Color(0xFFFFF59D),
       spriteId: 'holy_lance',
+    ),
+
+    // === MELEE: SWORD ===
+    const WeaponData(
+      name: 'Iron Sword',
+      type: WeaponType.sword,
+      rarity: WeaponRarity.common,
+      damage: 25,
+      fireRate: 2.5,
+      bulletSpeed: 0,
+      color: Color(0xFFBDBDBD),
+      spriteId: 'iron_sword',
+      maxAmmo: -1,
+    ),
+    const WeaponData(
+      name: 'Flame Blade',
+      type: WeaponType.sword,
+      rarity: WeaponRarity.rare,
+      element: ElementType.fire,
+      damage: 40,
+      fireRate: 2.8,
+      bulletSpeed: 0,
+      color: Color(0xFFFF7043),
+      spriteId: 'flame_blade',
+      maxAmmo: 40,
+    ),
+    const WeaponData(
+      name: 'Frost Edge',
+      type: WeaponType.sword,
+      rarity: WeaponRarity.epic,
+      element: ElementType.ice,
+      damage: 50,
+      fireRate: 3.0,
+      bulletSpeed: 0,
+      color: Color(0xFF4FC3F7),
+      spriteId: 'frost_edge',
+      maxAmmo: 35,
+    ),
+
+    // === MELEE: AXE ===
+    const WeaponData(
+      name: 'Battle Axe',
+      type: WeaponType.axe,
+      rarity: WeaponRarity.uncommon,
+      damage: 55,
+      fireRate: 1.5,
+      bulletSpeed: 0,
+      color: Color(0xFF8D6E63),
+      spriteId: 'battle_axe',
+      maxAmmo: 30,
+    ),
+    const WeaponData(
+      name: 'Thunder Axe',
+      type: WeaponType.axe,
+      rarity: WeaponRarity.epic,
+      element: ElementType.lightning,
+      damage: 75,
+      fireRate: 1.8,
+      bulletSpeed: 0,
+      color: Color(0xFFFFEB3B),
+      spriteId: 'thunder_axe',
+      maxAmmo: 25,
+    ),
+
+    // === MELEE: SPEAR ===
+    const WeaponData(
+      name: 'Long Spear',
+      type: WeaponType.spear,
+      rarity: WeaponRarity.common,
+      damage: 30,
+      fireRate: 2.0,
+      bulletSpeed: 0,
+      color: Color(0xFF795548),
+      spriteId: 'long_spear',
+      maxAmmo: -1,
+    ),
+    const WeaponData(
+      name: 'Poison Spear',
+      type: WeaponType.spear,
+      rarity: WeaponRarity.rare,
+      element: ElementType.poison,
+      damage: 35,
+      fireRate: 2.2,
+      bulletSpeed: 0,
+      color: Color(0xFF9CCC65),
+      spriteId: 'poison_spear',
+      maxAmmo: 30,
+    ),
+
+    // === MELEE: HAMMER ===
+    const WeaponData(
+      name: 'War Hammer',
+      type: WeaponType.hammer,
+      rarity: WeaponRarity.rare,
+      damage: 70,
+      fireRate: 1.0,
+      bulletSpeed: 0,
+      color: Color(0xFF616161),
+      spriteId: 'war_hammer',
+      maxAmmo: 20,
+    ),
+    const WeaponData(
+      name: 'Holy Hammer',
+      type: WeaponType.hammer,
+      rarity: WeaponRarity.legendary,
+      element: ElementType.holy,
+      damage: 100,
+      fireRate: 1.2,
+      bulletSpeed: 0,
+      color: Color(0xFFFFF59D),
+      spriteId: 'holy_hammer',
+      maxAmmo: 15,
     ),
   ];
 
