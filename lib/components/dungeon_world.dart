@@ -440,16 +440,17 @@ class CorridorVisual extends PositionComponent
 }
 
 /// A wall segment that blocks bullets and the player.
-class WallSegment extends RectangleComponent with CollisionCallbacks {
+///
+/// Note: we deliberately do NOT add a Flame collision hitbox to walls.
+/// With 5+ rooms × 8 wall segments each, registering them all in the
+/// global collision system caused N×M bullet/enemy ↔ wall pair checks
+/// every frame and tanked perf. Bullets check `DungeonWorld.pointInWall`
+/// manually each tick (one cheap rect-array scan), and the player's
+/// movement uses the same lookup for sliding.
+class WallSegment extends RectangleComponent {
   WallSegment({
     required super.size,
     required super.position,
     required super.paint,
   });
-
-  @override
-  Future<void> onLoad() async {
-    await super.onLoad();
-    add(RectangleHitbox(collisionType: CollisionType.passive));
-  }
 }

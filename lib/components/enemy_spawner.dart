@@ -70,13 +70,23 @@ class Enemy extends PositionComponent
     super.update(dt);
     if (isDead) return;
 
+    // CULLING: skip expensive AI work if the enemy is far from the player.
+    // We still keep them alive (and tracked) but don't move/shoot them.
     final player = game.player;
-    final toPlayer = player.position - position;
-    final dist = toPlayer.length;
+    final dx = player.position.x - position.x;
+    final dy = player.position.y - position.y;
+    final distSq = dx * dx + dy * dy;
+    const cullDistSq = 1100.0 * 1100.0;
+    if (distSq > cullDistSq) {
+      return;
+    }
+
+    final dist = sqrt(distSq);
     if (dist > 40) {
       // Steer around walls: if a wall is between us and the player on the
       // direct vector, slide along it toward the nearest open direction.
-      moveDirection = _steeringDirection(toPlayer.normalized());
+      final desired = Vector2(dx, dy)..scale(1.0 / dist);
+      moveDirection = _steeringDirection(desired);
       position += moveDirection * speed * dt;
     } else {
       moveDirection = Vector2.zero();

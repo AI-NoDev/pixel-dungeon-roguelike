@@ -112,18 +112,17 @@ class Bullet extends PositionComponent
     _lifetime += dt;
     if (_lifetime > maxLifetime) {
       removeFromParent();
+      return;
+    }
+    // Manual wall check (replaces Flame collision pair with WallSegment).
+    if (game.isLoaded && game.dungeonWorld.pointInWall(position, radius: 4)) {
+      removeFromParent();
     }
   }
 
   @override
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
-
-    // Bullet hits wall — leave decal and destroy
-    if (other is WallSegment) {
-      removeFromParent();
-      return;
-    }
 
     if (!isPlayerBullet && other is Player) {
       other.takeDamage(damage);

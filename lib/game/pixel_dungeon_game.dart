@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flame/events.dart';
+import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../components/player.dart';
@@ -28,7 +29,7 @@ import '../data/heroes.dart';
 import '../systems/audio_system.dart';
 
 class PixelDungeonGame extends FlameGame
-    with HasCollisionDetection, HasKeyboardHandlerComponents {
+    with HasQuadTreeCollisionDetection, HasKeyboardHandlerComponents {
   late Player player;
   late DungeonWorld dungeonWorld;
   late EnemySpawner enemySpawner;
@@ -82,6 +83,27 @@ class PixelDungeonGame extends FlameGame
   void _initFloor() {
     currentFloorConfig = FloorConfig.getConfig(gameState.currentFloor);
     dungeonMap = DungeonMap.generate(currentFloorConfig);
+
+    // Initialize quadtree collision detection bounds.
+    // World extents are derived from the dungeon map's room positions.
+    double minX = 0, minY = 0, maxX = 0, maxY = 0;
+    for (final r in dungeonMap.rooms) {
+      if (r.worldPosition.x < minX) minX = r.worldPosition.x;
+      if (r.worldPosition.y < minY) minY = r.worldPosition.y;
+      final fx = r.worldPosition.x + r.size.x;
+      final fy = r.worldPosition.y + r.size.y;
+      if (fx > maxX) maxX = fx;
+      if (fy > maxY) maxY = fy;
+    }
+    initializeCollisionDetection(
+      mapDimensions: Rect.fromLTRB(
+        minX - 200,
+        minY - 200,
+        maxX + 200,
+        maxY + 200,
+      ),
+      minimumDistance: 10,
+    );
 
     // Build dungeon world
     dungeonWorld = DungeonWorld(
