@@ -2,6 +2,8 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
 import '../components/pickup_base.dart';
+import '../components/enemy_spawner.dart';
+import '../data/dungeon_map.dart';
 import '../i18n/app_localizations.dart';
 import 'joystick_widget.dart';
 import 'hud_widget.dart';
@@ -29,6 +31,7 @@ class _GameOverlayState extends State<GameOverlay> {
   bool _showWeaponPickup = false;
   bool _showShop = false;
   bool _showGameOver = false;
+  double _damageFlash = 0;
 
   @override
   void initState() {
@@ -85,6 +88,13 @@ class _GameOverlayState extends State<GameOverlay> {
             top: 16,
             right: 16,
             child: _buildPauseButton(),
+          ),
+
+          // Wave indicator (bottom center, shows during active combat)
+          Positioned(
+            top: 44,
+            left: 16,
+            child: _buildWaveIndicator(),
           ),
 
           // Move joystick - left
@@ -185,6 +195,22 @@ class _GameOverlayState extends State<GameOverlay> {
 
           // Game over overlay
           if (_showGameOver) _buildGameOverOverlay(),
+
+          // Damage flash (red vignette when player is hit)
+          if (widget.game.isLoaded && widget.game.player.isInvincible)
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.red.withValues(alpha: 0.15),
+                    ],
+                    radius: 1.2,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -200,6 +226,46 @@ class _GameOverlayState extends State<GameOverlay> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: const Icon(Icons.pause, color: Colors.white54, size: 20),
+      ),
+    );
+  }
+
+  Widget _buildWaveIndicator() {
+    // Show enemies remaining in current room
+    if (!widget.game.isLoaded) return const SizedBox.shrink();
+    final room = widget.game.currentRoom;
+    if (room == null || room.cleared) return const SizedBox.shrink();
+    if (room.type != RoomType.combat && room.type != RoomType.elite) {
+      return const SizedBox.shrink();
+    }
+
+    // Count live enemies
+    int liveCount = 0;
+    for (final c in widget.game.world.children) {
+      if (c is Enemy && !c.isDead) liveCount++;
+    }
+    if (liveCount == 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.dangerous, color: Colors.redAccent, size: 12),
+          const SizedBox(width: 4),
+          Text(
+            '$liveCount',
+            style: const TextStyle(
+              color: Colors.redAccent,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
