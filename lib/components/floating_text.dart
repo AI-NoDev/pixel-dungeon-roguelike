@@ -54,7 +54,7 @@ class FloatingText extends TextComponent {
     if (progress > fadeStart) {
       alpha = 1.0 - (progress - fadeStart) / (1.0 - fadeStart);
     }
-    _updateRenderer(alpha.clamp(0.0, 1.0));
+    _maybeUpdateRenderer(alpha.clamp(0.0, 1.0));
 
     if (_elapsed >= duration) {
       removeFromParent();
@@ -79,6 +79,15 @@ class FloatingText extends TextComponent {
         ],
       ),
     );
+  }
+
+  /// Throttle full TextPaint rebuilds — they recompile a Paragraph each
+  /// time and dominate hot loops when many floaters are alive at once.
+  double _lastPaintAlpha = -1;
+  void _maybeUpdateRenderer(double alpha) {
+    if ((alpha - _lastPaintAlpha).abs() < 0.05) return;
+    _lastPaintAlpha = alpha;
+    _updateRenderer(alpha);
   }
 
   // Convenience constructors

@@ -248,12 +248,16 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
 
   Enemy? _findNearestEnemy(double maxRange) {
     Enemy? nearest;
-    double nearestDist = maxRange;
+    double nearestDistSq = maxRange * maxRange;
+    final ppos = position;
+    // Use squared distance to avoid sqrt per enemy.
     for (final c in game.world.children) {
       if (c is Enemy && !c.isDead) {
-        final d = c.position.distanceTo(position);
-        if (d < nearestDist) {
-          nearestDist = d;
+        final dx = c.position.x - ppos.x;
+        final dy = c.position.y - ppos.y;
+        final dSq = dx * dx + dy * dy;
+        if (dSq < nearestDistSq) {
+          nearestDistSq = dSq;
           nearest = c;
         }
       }

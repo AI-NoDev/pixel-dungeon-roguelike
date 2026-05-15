@@ -12,7 +12,7 @@ class HudWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<void>(
-      stream: Stream.periodic(const Duration(milliseconds: 100)),
+      stream: Stream.periodic(const Duration(milliseconds: 200)),
       builder: (context, _) {
         return Row(
           children: [

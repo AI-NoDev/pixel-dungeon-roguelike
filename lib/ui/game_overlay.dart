@@ -324,54 +324,58 @@ class InteractButton extends StatefulWidget {
 
 class _InteractButtonState extends State<InteractButton> {
   InteractablePickup? _nearby;
-  late final Stream<int> _ticker;
 
   @override
   void initState() {
     super.initState();
-    _ticker = Stream.periodic(const Duration(milliseconds: 200), (i) => i);
+    _tick();
+  }
+
+  Future<void> _tick() async {
+    while (mounted) {
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      final next = widget.game.nearestPickup();
+      if (next != _nearby) {
+        setState(() => _nearby = next);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<int>(
-      stream: _ticker,
-      builder: (context, _) {
-        _nearby = widget.game.nearestPickup();
-        if (_nearby == null) return const SizedBox.shrink();
-        return GestureDetector(
-          onTap: () {
-            widget.game.triggerInteract();
-            setState(() => _nearby = null);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xCCFFD700),
-              borderRadius: BorderRadius.circular(40),
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: const [
-                BoxShadow(color: Color(0x55000000), blurRadius: 6, offset: Offset(0, 2)),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.touch_app, color: Colors.black, size: 22),
-                const SizedBox(width: 6),
-                Text(
-                  _nearby!.pickupLabel,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+    if (_nearby == null) return const SizedBox.shrink();
+    return GestureDetector(
+      onTap: () {
+        widget.game.triggerInteract();
+        setState(() => _nearby = null);
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xCCFFD700),
+          borderRadius: BorderRadius.circular(40),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [
+            BoxShadow(color: Color(0x55000000), blurRadius: 6, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.touch_app, color: Colors.black, size: 22),
+            const SizedBox(width: 6),
+            Text(
+              _nearby!.pickupLabel,
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

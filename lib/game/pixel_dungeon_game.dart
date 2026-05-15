@@ -336,13 +336,16 @@ class PixelDungeonGame extends FlameGame
   InteractablePickup? nearestPickup({double maxRange = 60}) {
     if (!isLoaded) return null;
     InteractablePickup? best;
-    double bestDist = maxRange;
+    double bestDistSq = maxRange * maxRange;
+    final ppos = player.position;
     for (final c in world.children) {
       if (c is InteractablePickup && !(c as InteractablePickup).isConsumed) {
         final pickup = c as InteractablePickup;
-        final d = pickup.position.distanceTo(player.position);
-        if (d < bestDist) {
-          bestDist = d;
+        final dx = pickup.position.x - ppos.x;
+        final dy = pickup.position.y - ppos.y;
+        final dSq = dx * dx + dy * dy;
+        if (dSq < bestDistSq) {
+          bestDistSq = dSq;
           best = pickup;
         }
       }

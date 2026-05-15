@@ -32,9 +32,15 @@ class AudioSystem {
   /// Minimum gap between repeats per sound. Tuned to avoid stutter on
   /// fast-fire weapons while keeping the audio feedback responsive.
   static const Map<String, int> _minGapMs = {
-    'shoot.wav': 50,        // SMG fires up to 12/s -> cap at 20/s
-    'hit.wav': 35,
-    'pickup_gold.wav': 60,
+    'shoot.wav': 70,
+    'shoot_heavy.wav': 100,
+    'shoot_laser.wav': 70,
+    'hit.wav': 50,
+    'crit.wav': 50,
+    'pickup_gold.wav': 80,
+    'slime_die.wav': 80,
+    'pickup_item.wav': 80,
+    'footstep.wav': 200,
   };
 
   static Future<void> init() async {
