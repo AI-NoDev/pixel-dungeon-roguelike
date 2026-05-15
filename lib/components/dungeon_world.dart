@@ -168,7 +168,8 @@ class _DoorRange {
   final double end;
 }
 
-/// Visual representation of a single room (floor + walls).
+/// Visual representation of a single room as an organic slime cavern.
+/// Renders irregular cave walls, moss, puddles, stalactites — not a grid.
 class RoomVisual extends PositionComponent
     with HasGameReference<PixelDungeonGame> {
   RoomVisual({required this.node, required this.theme, required this.doors})
@@ -183,70 +184,175 @@ class RoomVisual extends PositionComponent
 
   final Random _rng = Random();
 
-  // Pre-computed grid line offsets (drawn once per frame in render()
-  // instead of as 300+ child components, which was murdering GPU perf).
-  late final List<double> _gridXs;
-  late final List<double> _gridYs;
+  // Pre-computed cave shape
+  late final Path _floorPath;
+  late final Path _wallEdgePath;
   late final Paint _floorPaint;
-  late final Paint _gridPaint;
+  late final Paint _bgPaint;
+  late final Paint _wallPaint;
+  late final Paint _edgePaint;
+  late final Paint _mossPaint;
+  late final Paint _puddlePaint;
+  late final List<Offset> _mossSpots;
+  late final List<Offset> _puddleSpots;
+  late final List<_Stalactite> _stalactites;
+  late final List<Offset> _noiseSpots;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
+    _bgPaint = Paint()..color = theme.backgroundColor;
     _floorPaint = Paint()..color = theme.floorColor;
-    _gridPaint = Paint()
-      ..color = theme.accentColor.withValues(alpha: 0.06)
+    _wallPaint = Paint()..color = theme.wallColor;
+    _edgePaint = Paint()
+      ..color = theme.wallColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = 3;
+    _mossPaint = Paint()..color = const Color(0xFF2E7D32).withValues(alpha: 0.25);
+    _puddlePaint = Paint()..color = const Color(0xFF66BB6A).withValues(alpha: 0.18);
 
-    const tileSize = 40.0;
-    _gridXs = [
-      for (double x = 0; x < size.x; x += tileSize) x,
-    ];
-    _gridYs = [
-      for (double y = 0; y < size.y; y += tileSize) y,
-    ];
-
-    // Decoration sprites scattered around the room (no hitbox).
+    _generateCaveShape();
+    _generateDetails();
     await _addDecor();
-
-    // Walls (will be cut where corridors connect)
     _buildWalls();
+  }
+
+  void _generateCaveShape() {
+    final w = size.x;
+    final h = size.y;
+    final margin = 28.0;
+    final points = <Offset>[];
+
+    // Walk around perimeter with random insets for organic edges.
+    for (double x = margin; x < w - margin; x += 25 + _rng.nextDouble() * 20) {
+      points.add(Offset(x, margin + _rng.nextDouble() * 12));
+    }
+    for (double y = margin; y < h - margin; y += 25 + _rng.nextDouble() * 20) {
+      points.add(Offset(w - margin - _rng.nextDouble() * 12, y));
+    }
+    for (double x = w - margin; x > margin; x -= 25 + _rng.nextDouble() * 20) {
+      points.add(Offset(x, h - margin - _rng.nextDouble() * 12));
+    }
+    for (double y = h - margin; y > margin; y -= 25 + _rng.nextDouble() * 20) {
+      points.add(Offset(margin + _rng.nextDouble() * 12, y));
+    }
+
+    _floorPath = Path();
+    if (points.isNotEmpty) {
+      _floorPath.moveTo(points.first.dx, points.first.dy);
+      for (int i = 1; i < points.length; i++) {
+        final prev = points[i - 1];
+        final curr = points[i];
+        _floorPath.quadraticBezierTo(
+          prev.dx, prev.dy,
+          (prev.dx + curr.dx) / 2, (prev.dy + curr.dy) / 2,
+        );
+      }
+      _floorPath.close();
+    }
+
+    // Slightly larger wall edge
+    final cx = w / 2, cy = h / 2;
+    _wallEdgePath = Path();
+    final wallPts = points.map((p) {
+      final dx = p.dx - cx;
+      final dy = p.dy - cy;
+      final s = 1.06 + _rng.nextDouble() * 0.03;
+      return Offset(cx + dx * s, cy + dy * s);
+    }).toList();
+    if (wallPts.isNotEmpty) {
+      _wallEdgePath.moveTo(wallPts.first.dx, wallPts.first.dy);
+      for (int i = 1; i < wallPts.length; i++) {
+        final prev = wallPts[i - 1];
+        final curr = wallPts[i];
+        _wallEdgePath.quadraticBezierTo(
+          prev.dx, prev.dy,
+          (prev.dx + curr.dx) / 2, (prev.dy + curr.dy) / 2,
+        );
+      }
+      _wallEdgePath.close();
+    }
+  }
+
+  void _generateDetails() {
+    _mossSpots = List.generate(3 + _rng.nextInt(3), (_) => Offset(
+      60 + _rng.nextDouble() * (size.x - 120),
+      60 + _rng.nextDouble() * (size.y - 120),
+    ));
+    _puddleSpots = List.generate(1 + _rng.nextInt(3), (_) => Offset(
+      80 + _rng.nextDouble() * (size.x - 160),
+      80 + _rng.nextDouble() * (size.y - 160),
+    ));
+    _stalactites = List.generate(2 + _rng.nextInt(3), (_) => _Stalactite(
+      x: 50 + _rng.nextDouble() * (size.x - 100),
+      length: 12 + _rng.nextDouble() * 20,
+      width: 3 + _rng.nextDouble() * 3,
+    ));
+    // Deterministic noise dots (no per-frame random)
+    _noiseSpots = List.generate(30, (i) => Offset(
+      40 + ((i * 37 + i * i * 7) % (size.x - 80).toInt()).toDouble(),
+      40 + ((i * 53 + i * i * 3) % (size.y - 80).toInt()).toDouble(),
+    ));
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    // Floor as one rectangle.
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      _floorPaint,
-    );
-    // Grid as a single batch of line draws (no per-tile components).
-    for (final x in _gridXs) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.y), _gridPaint);
+
+    // Dark cave void background
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _bgPaint);
+
+    // Rocky wall border
+    canvas.drawPath(_wallEdgePath, _wallPaint);
+
+    // Cave floor (organic shape)
+    canvas.drawPath(_floorPath, _floorPaint);
+
+    // Subtle floor noise
+    final noisePaint = Paint()..color = theme.accentColor.withValues(alpha: 0.04);
+    for (final spot in _noiseSpots) {
+      canvas.drawCircle(spot, 1.5, noisePaint);
     }
-    for (final y in _gridYs) {
-      canvas.drawLine(Offset(0, y), Offset(size.x, y), _gridPaint);
+
+    // Moss patches
+    for (final spot in _mossSpots) {
+      canvas.drawCircle(spot, 7, _mossPaint);
     }
+
+    // Slime puddles
+    for (final spot in _puddleSpots) {
+      canvas.drawOval(
+        Rect.fromCenter(center: spot, width: 28, height: 16),
+        _puddlePaint,
+      );
+      canvas.drawCircle(
+        spot + const Offset(-3, -2), 3,
+        Paint()..color = Colors.white.withValues(alpha: 0.08),
+      );
+    }
+
+    // Stalactites
+    final stalPaint = Paint()..color = theme.wallColor;
+    for (final s in _stalactites) {
+      final path = Path()
+        ..moveTo(s.x - s.width / 2, 18)
+        ..lineTo(s.x, 18 + s.length)
+        ..lineTo(s.x + s.width / 2, 18)
+        ..close();
+      canvas.drawPath(path, stalPaint);
+    }
+
+    // Edge outline
+    canvas.drawPath(_floorPath, _edgePaint);
   }
 
-  /// Pick 2-4 random decor pieces and place them around the room walls.
   Future<void> _addDecor() async {
-    // Decor pool depends on theme
-    final wallDecor = const ['torch_a', 'torch_b', 'banner', 'chain', 'cobweb'];
-    final floorDecor = const [
-      'barrel', 'crate', 'skull', 'bones',
-      'crystal', 'mushroom', 'crack', 'tile_dark', 'grate',
-    ];
-
-    final count = 2 + _rng.nextInt(3);
+    final caveDecor = const ['crystal', 'mushroom', 'bones', 'skull', 'crack'];
+    final count = 2 + _rng.nextInt(2);
     for (int i = 0; i < count; i++) {
-      final isWall = _rng.nextBool();
-      final pool = isWall ? wallDecor : floorDecor;
-      final id = pool[_rng.nextInt(pool.length)];
-      final pos = isWall ? _wallSpot() : _floorSpot();
+      final id = caveDecor[_rng.nextInt(caveDecor.length)];
+      final pos = _floorSpot();
       try {
         final image = await game.images.load('decor/$id.png');
         add(SpriteComponent(
@@ -259,96 +365,44 @@ class RoomVisual extends PositionComponent
     }
   }
 
-  Vector2 _wallSpot() {
-    // Pick a side, then pick a position along it (skip near doors)
-    final side = _rng.nextInt(4);
-    final t = DungeonWorld.wallThickness.toDouble();
-    switch (side) {
-      case 0: // top
-        return Vector2(40 + _rng.nextDouble() * (size.x - 80), t + 4);
-      case 1: // bottom
-        return Vector2(40 + _rng.nextDouble() * (size.x - 80), size.y - t - 32);
-      case 2: // left
-        return Vector2(t + 4, 40 + _rng.nextDouble() * (size.y - 80));
-      default: // right
-        return Vector2(size.x - t - 32, 40 + _rng.nextDouble() * (size.y - 80));
-    }
-  }
-
-  Vector2 _floorSpot() {
-    // Stay within inner area (not against walls)
-    return Vector2(
-      80 + _rng.nextDouble() * (size.x - 160),
-      80 + _rng.nextDouble() * (size.y - 160),
-    );
-  }
+  Vector2 _floorSpot() => Vector2(
+    80 + _rng.nextDouble() * (size.x - 160),
+    80 + _rng.nextDouble() * (size.y - 160),
+  );
 
   void _buildWalls() {
-    final wallPaint = Paint()..color = theme.wallColor;
+    // Invisible collision walls (same rect positions as before).
+    final wallPaint = Paint()..color = Colors.transparent;
     final t = DungeonWorld.wallThickness;
 
-    // Horizontal wall builder (top or bottom). Splits the wall around any
-    // door cutout to leave the corridor open.
-    void buildHorizontal(double y, _DoorRange? door) {
+    void buildH(double y, _DoorRange? door) {
       if (door == null) {
-        add(WallSegment(
-          size: Vector2(size.x, t),
-          position: Vector2(0, y),
-          paint: wallPaint,
-        ));
+        add(WallSegment(size: Vector2(size.x, t), position: Vector2(0, y), paint: wallPaint));
         return;
       }
-      // Left segment
-      if (door.start > 0) {
-        add(WallSegment(
-          size: Vector2(door.start, t),
-          position: Vector2(0, y),
-          paint: wallPaint,
-        ));
-      }
-      // Right segment
-      if (door.end < size.x) {
-        add(WallSegment(
-          size: Vector2(size.x - door.end, t),
-          position: Vector2(door.end, y),
-          paint: wallPaint,
-        ));
-      }
+      if (door.start > 0) add(WallSegment(size: Vector2(door.start, t), position: Vector2(0, y), paint: wallPaint));
+      if (door.end < size.x) add(WallSegment(size: Vector2(size.x - door.end, t), position: Vector2(door.end, y), paint: wallPaint));
     }
 
-    // Vertical wall builder (left or right).
-    void buildVertical(double x, _DoorRange? door) {
+    void buildV(double x, _DoorRange? door) {
       if (door == null) {
-        add(WallSegment(
-          size: Vector2(t, size.y),
-          position: Vector2(x, 0),
-          paint: wallPaint,
-        ));
+        add(WallSegment(size: Vector2(t, size.y), position: Vector2(x, 0), paint: wallPaint));
         return;
       }
-      // Top segment
-      if (door.start > 0) {
-        add(WallSegment(
-          size: Vector2(t, door.start),
-          position: Vector2(x, 0),
-          paint: wallPaint,
-        ));
-      }
-      // Bottom segment
-      if (door.end < size.y) {
-        add(WallSegment(
-          size: Vector2(t, size.y - door.end),
-          position: Vector2(x, door.end),
-          paint: wallPaint,
-        ));
-      }
+      if (door.start > 0) add(WallSegment(size: Vector2(t, door.start), position: Vector2(x, 0), paint: wallPaint));
+      if (door.end < size.y) add(WallSegment(size: Vector2(t, size.y - door.end), position: Vector2(x, door.end), paint: wallPaint));
     }
 
-    buildHorizontal(0, doors[RoomSide.top]);
-    buildHorizontal(size.y - t, doors[RoomSide.bottom]);
-    buildVertical(0, doors[RoomSide.left]);
-    buildVertical(size.x - t, doors[RoomSide.right]);
+    buildH(0, doors[RoomSide.top]);
+    buildH(size.y - t, doors[RoomSide.bottom]);
+    buildV(0, doors[RoomSide.left]);
+    buildV(size.x - t, doors[RoomSide.right]);
   }
+}
+
+class _Stalactite {
+  final double x, length, width;
+  _Stalactite({required this.x, required this.length, required this.width});
 }
 
 /// Corridor between two rooms. Drawn as a path.
