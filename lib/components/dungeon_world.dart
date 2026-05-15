@@ -405,7 +405,7 @@ class _Stalactite {
   _Stalactite({required this.x, required this.length, required this.width});
 }
 
-/// Corridor between two rooms. Drawn as a path.
+/// Corridor between two rooms. Drawn as an organic tunnel.
 class CorridorVisual extends PositionComponent
     with HasGameReference<PixelDungeonGame> {
   CorridorVisual({
@@ -418,22 +418,18 @@ class CorridorVisual extends PositionComponent
   final RoomNode roomB;
   final DungeonTheme theme;
 
+  final Random _rng = Random();
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    final centerA = roomA.center;
-    final centerB = roomB.center;
-
     final dx = (roomB.gridX - roomA.gridX);
-    final dy = (roomB.gridY - roomA.gridY);
 
     if (dx != 0) {
-      // Horizontal corridor
-      _buildHorizontalCorridor(centerA, centerB);
+      _buildHorizontalCorridor(roomA.center, roomB.center);
     } else {
-      // Vertical corridor
-      _buildVerticalCorridor(centerA, centerB);
+      _buildVerticalCorridor(roomA.center, roomB.center);
     }
   }
 
@@ -446,23 +442,28 @@ class CorridorVisual extends PositionComponent
     final width = endX - startX;
     if (width <= 0) return;
 
-    // Floor
-    add(RectangleComponent(
-      size: Vector2(width, DungeonWorld.corridorWidth),
-      position: Vector2(startX, centerY - DungeonWorld.corridorWidth / 2),
-      paint: Paint()..color = theme.floorColor,
+    final cw = DungeonWorld.corridorWidth;
+    final wt = DungeonWorld.wallThickness;
+
+    // Organic tunnel floor (slightly wavy)
+    add(_TunnelFloor(
+      tunnelPos: Vector2(startX, centerY - cw / 2),
+      tunnelSize: Vector2(width, cw),
+      theme: theme,
+      horizontal: true,
     ));
-    // Top wall
+
+    // Invisible collision walls
+    final wp = Paint()..color = Colors.transparent;
     add(WallSegment(
-      size: Vector2(width, DungeonWorld.wallThickness),
-      position: Vector2(startX, centerY - DungeonWorld.corridorWidth / 2 - DungeonWorld.wallThickness),
-      paint: Paint()..color = theme.wallColor,
+      size: Vector2(width, wt),
+      position: Vector2(startX, centerY - cw / 2 - wt),
+      paint: wp,
     ));
-    // Bottom wall
     add(WallSegment(
-      size: Vector2(width, DungeonWorld.wallThickness),
-      position: Vector2(startX, centerY + DungeonWorld.corridorWidth / 2),
-      paint: Paint()..color = theme.wallColor,
+      size: Vector2(width, wt),
+      position: Vector2(startX, centerY + cw / 2),
+      paint: wp,
     ));
   }
 
@@ -475,21 +476,114 @@ class CorridorVisual extends PositionComponent
     final height = endY - startY;
     if (height <= 0) return;
 
-    add(RectangleComponent(
-      size: Vector2(DungeonWorld.corridorWidth, height),
-      position: Vector2(centerX - DungeonWorld.corridorWidth / 2, startY),
-      paint: Paint()..color = theme.floorColor,
+    final cw = DungeonWorld.corridorWidth;
+    final wt = DungeonWorld.wallThickness;
+
+    add(_TunnelFloor(
+      tunnelPos: Vector2(centerX - cw / 2, startY),
+      tunnelSize: Vector2(cw, height),
+      theme: theme,
+      horizontal: false,
+    ));
+
+    final wp = Paint()..color = Colors.transparent;
+    add(WallSegment(
+      size: Vector2(wt, height),
+      position: Vector2(centerX - cw / 2 - wt, startY),
+      paint: wp,
     ));
     add(WallSegment(
-      size: Vector2(DungeonWorld.wallThickness, height),
-      position: Vector2(centerX - DungeonWorld.corridorWidth / 2 - DungeonWorld.wallThickness, startY),
-      paint: Paint()..color = theme.wallColor,
+      size: Vector2(wt, height),
+      position: Vector2(centerX + cw / 2, startY),
+      paint: wp,
     ));
-    add(WallSegment(
-      size: Vector2(DungeonWorld.wallThickness, height),
-      position: Vector2(centerX + DungeonWorld.corridorWidth / 2, startY),
-      paint: Paint()..color = theme.wallColor,
-    ));
+  }
+}
+
+/// Renders a tunnel floor with organic edges and subtle details.
+class _TunnelFloor extends PositionComponent {
+  _TunnelFloor({
+    required Vector2 tunnelPos,
+    required Vector2 tunnelSize,
+    required this.theme,
+    required this.horizontal,
+  }) : super(position: tunnelPos, size: tunnelSize);
+
+  final DungeonTheme theme;
+  final bool horizontal;
+  final Random _rng = Random();
+
+  late final Paint _floorPaint;
+  late final Paint _wallPaint;
+  late final Paint _edgePaint;
+  late final Path _tunnelPath;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _floorPaint = Paint()..color = theme.floorColor;
+    _wallPaint = Paint()..color = theme.wallColor;
+    _edgePaint = Paint()
+      ..color = theme.wallColor.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    _tunnelPath = _buildTunnelPath();
+  }
+
+  Path _buildTunnelPath() {
+    final path = Path();
+    final w = size.x;
+    final h = size.y;
+    final margin = 6.0;
+
+    if (horizontal) {
+      // Top edge (wavy)
+      path.moveTo(0, margin);
+      for (double x = 0; x < w; x += 20) {
+        final jitter = margin + _rng.nextDouble() * 5;
+        path.lineTo(x, jitter);
+      }
+      path.lineTo(w, margin);
+      // Bottom edge (wavy)
+      path.lineTo(w, h - margin);
+      for (double x = w; x > 0; x -= 20) {
+        final jitter = h - margin - _rng.nextDouble() * 5;
+        path.lineTo(x, jitter);
+      }
+      path.lineTo(0, h - margin);
+      path.close();
+    } else {
+      // Left edge
+      path.moveTo(margin, 0);
+      for (double y = 0; y < h; y += 20) {
+        final jitter = margin + _rng.nextDouble() * 5;
+        path.lineTo(jitter, y);
+      }
+      path.lineTo(margin, h);
+      // Right edge
+      path.lineTo(w - margin, h);
+      for (double y = h; y > 0; y -= 20) {
+        final jitter = w - margin - _rng.nextDouble() * 5;
+        path.lineTo(jitter, y);
+      }
+      path.lineTo(w - margin, 0);
+      path.close();
+    }
+    return path;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    // Background void
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y),
+      Paint()..color = theme.backgroundColor);
+    // Wall border
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _wallPaint);
+    // Organic floor
+    canvas.drawPath(_tunnelPath, _floorPaint);
+    canvas.drawPath(_tunnelPath, _edgePaint);
   }
 }
 

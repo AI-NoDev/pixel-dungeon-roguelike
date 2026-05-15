@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../game/pixel_dungeon_game.dart';
+import '../data/weapons.dart';
 
-/// Minimal HUD: HP bar (top-left) + ammo + gold (top-right corner).
-/// No minimap, no room progress, no theme name — keeps the screen clean
-/// so the dungeon explores via vision alone.
+/// Game HUD: HP bar, ammo, weapon name, gold, wave indicator.
 class HudWidget extends StatelessWidget {
   final PixelDungeonGame game;
 
@@ -14,13 +13,19 @@ class HudWidget extends StatelessWidget {
     return StreamBuilder<void>(
       stream: Stream.periodic(const Duration(milliseconds: 200)),
       builder: (context, _) {
-        return Row(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _buildHpBar(),
-            const SizedBox(width: 10),
-            _buildAmmoBadge(),
-            const Spacer(),
-            _buildGoldDisplay(),
+            Row(
+              children: [
+                _buildHpBar(),
+                const SizedBox(width: 10),
+                _buildWeaponBadge(),
+                const Spacer(),
+                _buildGoldDisplay(),
+              ],
+            ),
           ],
         );
       },
@@ -46,12 +51,12 @@ class HudWidget extends StatelessWidget {
             : Colors.red;
 
     return Container(
-      width: 160,
-      height: 22,
+      width: 140,
+      height: 20,
       decoration: BoxDecoration(
         color: Colors.black54,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Colors.white24),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white12),
       ),
       child: Stack(
         children: [
@@ -60,7 +65,7 @@ class HudWidget extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: hpColor,
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
@@ -69,7 +74,7 @@ class HudWidget extends StatelessWidget {
               '${game.player.hp.toInt()}/${game.player.maxHp.toInt()}',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -79,14 +84,19 @@ class HudWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildAmmoBadge() {
+  Widget _buildWeaponBadge() {
     if (!game.isLoaded) return const SizedBox.shrink();
     final p = game.player;
     final w = p.activeWeapon;
     final isStarter = p.secondaryWeapon == null;
-    final ammoText = isStarter ? '∞' : '${p.secondaryAmmo}';
+    final ammoText = isStarter
+        ? '∞'
+        : w.isMelee
+            ? '${p.secondaryAmmo}⚔'
+            : '${p.secondaryAmmo}';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.black54,
         borderRadius: BorderRadius.circular(8),
@@ -95,24 +105,64 @@ class HudWidget extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_iconForWeapon(w.spriteId), color: w.color, size: 14),
+          // Weapon type icon
+          Icon(
+            w.isMelee ? Icons.sports_martial_arts : _iconForWeapon(w.spriteId),
+            color: w.color,
+            size: 13,
+          ),
           const SizedBox(width: 4),
+          // Weapon name (truncated)
+          Text(
+            w.name.length > 10 ? '${w.name.substring(0, 9)}…' : w.name,
+            style: TextStyle(
+              color: w.rarityColor,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Ammo
           Text(
             ammoText,
             style: TextStyle(
               color: isStarter ? Colors.amber : Colors.white,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
           ),
+          // Element chip
+          if (w.element != ElementType.none) ...[
+            const SizedBox(width: 4),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _elementColor(w.element),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
+  Color _elementColor(ElementType e) {
+    switch (e) {
+      case ElementType.fire: return const Color(0xFFFF7043);
+      case ElementType.ice: return const Color(0xFF4FC3F7);
+      case ElementType.lightning: return const Color(0xFFFFEB3B);
+      case ElementType.poison: return const Color(0xFF9CCC65);
+      case ElementType.holy: return const Color(0xFFFFF59D);
+      case ElementType.dark: return const Color(0xFF7C4DFF);
+      case ElementType.none: return Colors.grey;
+    }
+  }
+
   IconData _iconForWeapon(String spriteId) {
     if (spriteId.contains('rocket') || spriteId.contains('cluster')) {
-      return Icons.flight_takeoff;
+      return Icons.rocket_launch;
     }
     if (spriteId.contains('laser') || spriteId.contains('plasma')) {
       return Icons.flash_on;
@@ -134,7 +184,7 @@ class HudWidget extends StatelessWidget {
 
   Widget _buildGoldDisplay() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.black54,
         borderRadius: BorderRadius.circular(8),
@@ -142,13 +192,13 @@ class HudWidget extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.monetization_on, color: Colors.amber, size: 14),
-          const SizedBox(width: 4),
+          const Icon(Icons.monetization_on, color: Colors.amber, size: 13),
+          const SizedBox(width: 3),
           Text(
             '${game.gameState.gold}',
             style: const TextStyle(
               color: Colors.amber,
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
           ),

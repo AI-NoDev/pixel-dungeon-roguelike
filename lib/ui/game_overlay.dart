@@ -71,6 +71,15 @@ class _GameOverlayState extends State<GameOverlay> {
             child: HudWidget(game: widget.game),
           ),
 
+          // Boss HP bar (shown when fighting a boss)
+          if (widget.game.currentBoss != null && !widget.game.currentBoss!.isDead)
+            Positioned(
+              top: 50,
+              left: 60,
+              right: 60,
+              child: _BossHpBar(game: widget.game),
+            ),
+
           // Pause button (top right corner)
           Positioned(
             top: 16,
@@ -376,6 +385,60 @@ class _InteractButtonState extends State<InteractButton> {
           ],
         ),
       ),
+    );
+  }
+}
+
+
+/// Boss health bar shown at the top of the screen during boss fights.
+class _BossHpBar extends StatelessWidget {
+  const _BossHpBar({required this.game});
+  final PixelDungeonGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<void>(
+      stream: Stream.periodic(const Duration(milliseconds: 100)),
+      builder: (context, _) {
+        final boss = game.currentBoss;
+        if (boss == null || boss.isDead) return const SizedBox.shrink();
+        final pct = (boss.hp / boss.maxHp).clamp(0.0, 1.0);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              boss.data.name,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+              ),
+            ),
+            const SizedBox(height: 3),
+            Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.red.shade900, width: 1),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: pct,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF1744), Color(0xFFFF6E40)],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

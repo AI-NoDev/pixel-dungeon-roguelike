@@ -53,6 +53,11 @@ class Enemy extends PositionComponent
 
   late RectangleComponent body;
 
+  // HP bar paints (shared across all enemies)
+  static final Paint _hpBgPaint = Paint()..color = const Color(0x88000000);
+  static final Paint _hpFillPaint = Paint()..color = const Color(0xFF4CAF50);
+  static final Paint _hpLowPaint = Paint()..color = const Color(0xFFFF5252);
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -63,6 +68,36 @@ class Enemy extends PositionComponent
     );
     add(body);
     add(RectangleHitbox(size: Vector2(20, 20), position: Vector2(2, 2)));
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (isDead) return;
+    // Draw HP bar above the enemy (only when damaged)
+    if (hp < maxHp) {
+      final barW = 22.0;
+      final barH = 3.0;
+      final barX = (size.x - barW) / 2;
+      final barY = -6.0;
+      final pct = (hp / maxHp).clamp(0.0, 1.0);
+
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(barX, barY, barW, barH),
+          const Radius.circular(1.5),
+        ),
+        _hpBgPaint,
+      );
+      final fillPaint = pct > 0.3 ? _hpFillPaint : _hpLowPaint;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(barX, barY, barW * pct, barH),
+          const Radius.circular(1.5),
+        ),
+        fillPaint,
+      );
+    }
   }
 
   @override

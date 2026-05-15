@@ -93,17 +93,25 @@ class FloatingText extends TextComponent {
   // Convenience constructors
 
   /// Damage to enemies (orange-yellow text, red bigger for crit)
+  /// Optionally tinted by element color.
   factory FloatingText.damage(
     Vector2 position,
     double damage, {
     bool isCritical = false,
+    Color? elementColor,
   }) {
+    Color textColor;
+    if (isCritical) {
+      textColor = const Color(0xFFFF1744);
+    } else if (elementColor != null) {
+      textColor = elementColor;
+    } else {
+      textColor = const Color(0xFFFFA726);
+    }
     return FloatingText(
       text: isCritical ? '-${damage.toInt()}!' : '-${damage.toInt()}',
       position: position,
-      color: isCritical
-          ? const Color(0xFFFF1744)  // bright red for crits
-          : const Color(0xFFFFA726), // warm orange for normal
+      color: textColor,
       fontSize: isCritical ? 22 : 14,
       duration: isCritical ? 1.0 : 0.7,
       driftDistance: isCritical ? 36 : 26,
