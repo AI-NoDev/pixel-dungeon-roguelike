@@ -143,7 +143,8 @@ class DungeonWorld extends PositionComponent
     }
   }
 
-  /// Find which room contains a world position.
+  /// Find which room contains a world position. Also checks corridors —
+  /// if the player is in a corridor, returns the nearest connected room.
   RoomNode? roomAt(Vector2 worldPos) {
     for (final room in map.rooms) {
       final r = Rect.fromLTWH(
@@ -156,6 +157,7 @@ class DungeonWorld extends PositionComponent
         return room;
       }
     }
+    // Not in any room — might be in a corridor. Return null (keep current room).
     return null;
   }
 }

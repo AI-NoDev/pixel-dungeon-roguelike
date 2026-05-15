@@ -20,7 +20,9 @@ class HudWidget extends StatelessWidget {
             Row(
               children: [
                 _buildHpBar(),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
+                _buildFloorBadge(),
+                const SizedBox(width: 8),
                 _buildWeaponBadge(),
                 const Spacer(),
                 _buildGoldDisplay(),
@@ -80,6 +82,26 @@ class HudWidget extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFloorBadge() {
+    if (!game.isLoaded) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Text(
+        'F${game.gameState.currentFloor}',
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

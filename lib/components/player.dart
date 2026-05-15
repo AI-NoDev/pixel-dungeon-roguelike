@@ -78,6 +78,11 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   bool isManualAim = false;       // dragged outside deadzone
   bool isDead = false;
 
+  // Invincibility frames after taking damage (prevents multi-hit stun-lock)
+  double _iFrameTimer = 0;
+  static const double _iFrameDuration = 0.5; // 0.5s of invincibility after hit
+  bool get isInvincible => _iFrameTimer > 0;
+
   // Talents collected
   List<TalentData> talents = [];
 
@@ -181,6 +186,17 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   void update(double dt) {
     super.update(dt);
     if (isDead) return;
+
+    // Tick invincibility frames
+    if (_iFrameTimer > 0) {
+      _iFrameTimer -= dt;
+      // Blink effect during i-frames
+      if (_animComp != null) {
+        _animComp!.opacity = ((_iFrameTimer * 10).toInt() % 2 == 0) ? 0.4 : 1.0;
+      }
+    } else if (_animComp != null && _animComp!.opacity != 1.0) {
+      _animComp!.opacity = 1.0;
+    }
 
     // Movement
     if (moveDirection.length > 0) {
@@ -448,8 +464,9 @@ class Player extends PositionComponent with HasGameReference<PixelDungeonGame>, 
   }
 
   void takeDamage(double damage) {
-    if (isDead) return;
+    if (isDead || isInvincible) return;
     hp -= damage;
+    _iFrameTimer = _iFrameDuration;
 
     // Show floating damage number
     game.world.add(FloatingText.playerDamage(
